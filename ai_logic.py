@@ -384,6 +384,9 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         # --- NOTIFICAÇÃO DO MERCHANT ---
         from whatsapp_service import whatsapp_manager
         company = db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            return "❌ *Erro de configuração.* Empresa não encontrada."
+
         if company.whatsapp_number:
             whatsapp_manager.notify_merchant_new_sale(company_id, new_sale.id, {
                 "merchant_number": company.whatsapp_number,
@@ -398,12 +401,16 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         pix_info = ""
         if payment_method == "PIX":
             from payments import generate_pix_payment
-            pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
-            # Usamos |SPLIT| para enviar a chave em uma mensagem separada, facilitando o "copia e cola"
-            pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
-                        f"{pix_res['qr_code']}\n\n"
-                        f"💳 *Valor:* R$ {total:.2f}\n\n"
-                        "💡 *Dica:* Copie o código acima e pague no seu banco.")
+            try:
+                pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
+                # Usamos |SPLIT| para enviar a chave em uma mensagem separada, facilitando o "copia e cola"
+                pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
+                            f"{pix_res['qr_code']}\n\n"
+                            f"💳 *Valor:* R$ {total:.2f}\n\n"
+                            "💡 *Dica:* Copie o código acima e pague no seu banco.")
+            except Exception as e:
+                logger.error(f"Erro ao gerar PIX: {e}")
+                pix_info = "\n\n⚠️ *Aviso:* Tivemos um problema para gerar o QR Code PIX automático. Por favor, fale com um atendente para receber a chave."
         
         # Localização da Loja (Para Retirada ou Referência)
         store_location_info = ""
@@ -412,9 +419,6 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
             if company.location_link:
                 store_location_info += f"\n🗺️ *GPS:* {company.location_link}"
 
-        # Limpa Estado
-        rule_states[state_key] = {'active': False, 'step': 0}
-        
         is_pickup = state.get('delivery_type') == 'pickup'
         resumo_logistica = "✅ *Retirada na Loja agendada!*" if is_pickup else f"🚚 *Entrega em:* {state['address']}"
         
@@ -432,11 +436,15 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                 "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos tudo aqui! Obrigado! 🛍️"
                 f"{pix_info}")
         
+        # Limpa Estado APENAS no sucesso total da geração da resposta
+        rule_states[state_key] = {'active': False, 'step': 0}
+
         # Se for um dicionário (para lidar com o SPLIT), retornamos como tal
         if "|SPLIT|" in resp:
             return {"text": resp}
         return resp
     except Exception as e:
+        logger.error(f"Erro finalize_whatsapp_sale: {e}")
         db.rollback()
         return "❌ *Erro ao processar pedido.* Por favor, tente novamente em instantes ou chame um atendente."
 
