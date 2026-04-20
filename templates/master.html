@@ -121,11 +121,11 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px; padding-left: 10px; border-left: 1px solid var(--glass-border);">
                     <div style="text-align: right;">
-                        <p style="font-size: 0.85rem; font-weight: 700; margin: 0;">Administrador</p>
-                        <p style="font-size: 0.7rem; color: var(--accent); margin: 0; font-weight: 600;">Online Now</p>
+                        <p style="font-size: 0.85rem; font-weight: 700; margin: 0; text-transform: capitalize;">{{ request.session.get('user', 'Administrador') }}</p>
+                        <p style="font-size: 0.7rem; color: #10b981; margin: 0; font-weight: 600;">Online Now</p>
                     </div>
                     <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--card-bg); border: 2px solid var(--glass-border); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                        <img src="https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff" alt="User">
+                        <img src="https://ui-avatars.com/api/?name={{ request.session.get('user') }}&background=6366f1&color=fff" alt="User">
                     </div>
                 </div>
             </div>

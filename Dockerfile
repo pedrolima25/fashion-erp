@@ -6,6 +6,7 @@ FROM mcr.microsoft.com/playwright/python:v1.50.0-jammy
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PORT 8000
+ENV TZ=America/Manaus
 
 # Set working directory
 WORKDIR /app

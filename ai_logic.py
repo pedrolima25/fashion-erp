@@ -397,4 +397,10 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
 
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
+def process_message(client_phone: str, message: str, db=None, company_id: int = None) -> str:
+    state_key = get_state_key(company_id, client_phone)
+    # Comandos globais que limpam o estado para recomeçar
+    if message.strip().lower() in ["oi", "olá", "ola", "sair", "cancelar", "menu"]:
+        if state_key in rule_states: 
+            del rule_states[state_key]
     return process_with_rules(client_phone, message, db, company_id)
