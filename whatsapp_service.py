@@ -133,7 +133,7 @@ class WhatsAppService:
                 if from_me or message.get("isGroupMsg"): return
 
                 from_num = message.get("from")
-                if not from_num or "status" in from_num: return
+                if not from_num or "status" in from_num or "@newsletter" in from_num: return
 
                 full_jid = from_num
                 celular = from_num.split("@")[0]

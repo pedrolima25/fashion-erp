@@ -38,9 +38,12 @@ if sys.platform == "win32":
 async def self_ping_task():
     """Mantém o servidor acordado em plataformas como Railway."""
     await asyncio.sleep(60)
-    url = os.environ.get("PUBLIC_URL")
+    # Tenta pegar a URL do Railway se PUBLIC_URL não estiver definida
+    url = os.environ.get("PUBLIC_URL") or os.environ.get("RAILWAY_STATIC_URL")
+    if url and not url.startswith("http"):
+        url = f"https://{url}/health"
+    
     if not url:
-        # Fallback local detectando porta do ambiente ou 8001
         port = os.environ.get("PORT", "8001")
         url = f"http://127.0.0.1:{port}/health"
     
