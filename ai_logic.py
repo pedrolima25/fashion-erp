@@ -185,34 +185,48 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
         if prod_id:
             product = db.query(Product).filter(Product.id == prod_id).first()
             state['product_id'] = prod_id
-            state['step'] = 3
             
-            # Busca variações (Tamanhos/Cores)
+            # Busca variações (Tamanhos/Cores) com estoque
             variations = db.query(ProductVariation).filter(ProductVariation.product_id == prod_id, ProductVariation.stock_quantity > 0).all()
             
+            if not variations:
+                return (f"✨ *{product.name}*\n\n"
+                        "😔 Poxa, no momento este modelo está sem estoque nos tamanhos disponíveis.\n\n"
+                        "Gostaria de ver outro modelo? Basta digitar *Catálogo* ou escolher outro número da lista anterior.")
+
+            state['step'] = 3
             detail = (f"✨ *{product.name}*\n"
-                      f"💰 *Preço:* R$ {product.base_price:.2f}\n"
-                      f"📝 *Descrição:* {product.description or 'Sem descrição'}\n\n"
-                      f"Disponível nestas opções:\n")
+                      f"💰 *Valor:* R$ {product.base_price:.2f}\n"
+                      f"📝 *Descrição:* {product.description or 'Peça exclusiva da nossa coleção.'}\n\n"
+                      f"📍 *Selecione o seu tamanho:*\n\n")
             
             state['var_map'] = {}
             for i, v in enumerate(variations, 1):
-                var_text = f"Tamanho: {v.size}"
+                var_text = f"Tamanho: *{v.size}*"
                 if v.color: var_text += f" | Cor: {v.color}"
+                # Preço diferenciado se houver override
+                price = v.price_override if v.price_override else product.base_price
+                if price != product.base_price:
+                    var_text += f" (R$ {price:.2f})"
+                
                 detail += f"{i}️⃣ {var_text}\n"
                 state['var_map'][str(i)] = v.id
             
-            detail += "\nPara escolher e iniciar o pedido, digite o número da opção.\nPara voltar ao catálogo, digite *Catálogo*."
+            detail += "\n👉 *Digite o número da opção desejada para reservar.*"
+            detail += "\n\n━━━━━━━━━━━━━━━\n"
+            detail += "↩️ Digite *Menu* para voltar."
+            
             rule_states[state_key] = state
             
             if product.image_base64:
                 return {"text": detail, "image_base64": product.image_base64}
             return detail
-        if text == "catálogo":
-            state['step'] = 1
-            rule_states[state_key] = state
-            return process_with_rules(client_phone, "1", db, company_id)
-        return "❌ *Peça não encontrada.* Escolha um número do catálogo."
+        
+        # Se não digitou um número válido do mapa, mas digitou um texto, talvez queira voltar
+        if text == "catálogo" or text == "voltar":
+            return process_with_rules(client_phone, "menu", db, company_id)
+
+        return "❌ *Opção inválida.* Escolha um dos números do catálogo acima ou digite *Menu* para recomeçar."
 
     elif state['step'] == 3:
         # Escolha da Variação
