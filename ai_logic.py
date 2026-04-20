@@ -1,5 +1,8 @@
 from database import Company, Product, ProductVariation, Category, Customer, Sale, SaleItem, get_manaus_time
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 rule_states = {}
 
@@ -335,10 +338,19 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
 
 def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
     try:
-        var_id = state['variation_id']
+        var_id = state.get('variation_id')
+        if not var_id:
+            return "❌ *Erro:* Detalhes do produto não encontrados. Por favor, reinicie seu pedido digitando *Menu*."
+            
         variation = db.query(ProductVariation).filter(ProductVariation.id == var_id).first()
+        if not variation:
+            return "❌ *Erro:* O tamanho escolhido não está mais disponível. Por favor, escolha outro."
+            
         product = variation.product
-        client_name = state['client_name']
+        if not product:
+            return "❌ *Erro:* Produto não encontrado."
+            
+        client_name = state.get('client_name', 'Cliente')
         
         # Cria ou Localiza Cliente
         customer = db.query(Customer).filter(Customer.phone == client_phone, Customer.company_id == company_id).first()
