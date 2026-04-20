@@ -27,6 +27,10 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     is_new = state_key not in rule_states
     state = rule_states.get(state_key, {'active': True, 'step': 0, 'product_id': None})
     text = msg.strip().lower()
+
+    # BUSCAR DADOS DA EMPRESA (Obrigatório para todos os passos)
+    company = db.query(Company).filter(Company.id == company_id).first()
+    company_name = company.name if company else "Nossa Loja"
     
     # Comandos Globais
     if text in ["oi", "olá", "ola", "voltar", "menu"] or is_new:
