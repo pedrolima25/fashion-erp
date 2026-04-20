@@ -205,7 +205,7 @@ class WhatsAppService:
                     "statusFind": check_status,
                     "headless": True,
                     "browser_args": b_args,
-                    "autoClose": 600
+                    "autoClose": 0 # Mantém aberto permanentemente
                 }
                 
                 if is_linux:

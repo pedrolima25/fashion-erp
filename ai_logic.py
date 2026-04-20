@@ -88,7 +88,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
 
         elif text == "4":
             # Listar TODOS os produtos de forma visual sequencial
-            products = db.query(Product).filter(Product.company_id == company_id, Product.active == True).all()
+            products = db.query(Product).filter(Product.company_id == company_id, Product.active == True, Product.show_on_whatsapp == True).all()
             if not products:
                 return "Ainda não temos produtos cadastrados no catálogo."
             
@@ -142,7 +142,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             state['selected_cat'] = cat_id
             
             category = db.query(Category).filter(Category.id == cat_id).first()
-            products = db.query(Product).filter(Product.category_id == cat_id, Product.active == True).all()
+            products = db.query(Product).filter(Product.category_id == cat_id, Product.active == True, Product.show_on_whatsapp == True).all()
             if not products:
                 return "Desculpe, não encontramos peças disponíveis nesta coleção agora. Quer ver outra? Digite *Menu*."
             

@@ -50,6 +50,10 @@
             <div style="flex: 1;">
                 <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome do Produto</label>
                 <input type="text" id="p-name" placeholder="Ex: Vestido Midi Floral" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="p-show-on-whatsapp" checked style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="p-show-on-whatsapp" style="font-size: 0.75rem; color: #10b981; cursor: pointer; font-weight: 600;">Exibir no Catálogo do WhatsApp</label>
+                </div>
             </div>
         </div>
         
@@ -194,13 +198,18 @@
                 <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${sizes}</div></td>
                 <td><span style="font-weight: 700; color: ${stockTotal <= 5 ? 'var(--secondary)' : 'var(--accent)'};">${stockTotal} un</span></td>
                 <td>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="editProduct(${p.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: var(--secondary);" onclick="deleteProduct(${p.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="font-size: 0.7rem; color: ${p.show_on_whatsapp ? '#10b981' : 'var(--text-muted)'};">
+                            <i class="fab fa-whatsapp"></i> ${p.show_on_whatsapp ? 'Visível' : 'Oculto'}
+                        </span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="editProduct(${p.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: var(--secondary);" onclick="deleteProduct(${p.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </td>
             `;
@@ -237,6 +246,7 @@
             document.getElementById('p-price').value = p.price;
             document.getElementById('p-cost').value = p.cost || 0;
             document.getElementById('p-category').value = categories.find(c => c.name === p.category)?.id || '';
+            document.getElementById('p-show-on-whatsapp').checked = p.show_on_whatsapp;
             
             if (p.image) {
                 previewImg.src = p.image;
@@ -258,6 +268,7 @@
             document.getElementById('p-price').value = '';
             document.getElementById('p-cost').value = '';
             document.getElementById('p-category').value = '';
+            document.getElementById('p-show-on-whatsapp').checked = true;
             previewImg.style.display = 'none';
             cameraIcon.style.display = 'block';
             currentImageBase64 = null;
@@ -322,6 +333,7 @@
             cost_price: parseFloat(document.getElementById('p-cost').value) || 0,
             category_id: categoryId ? parseInt(categoryId) : null,
             image_base64: currentImageBase64,
+            show_on_whatsapp: document.getElementById('p-show-on-whatsapp').checked,
             variations
         };
 

@@ -110,6 +110,7 @@ class Product(Base):
     cost_price = Column(Float, default=0.0)
     image_base64 = Column(Text, nullable=True)
     active = Column(Boolean, default=True)
+    show_on_whatsapp = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
     
     company = relationship("Company", back_populates="products")
@@ -313,6 +314,8 @@ def run_migrations():
         cols_prod = [c['name'] for c in inspector.get_columns('products')]
         if 'cost_price' not in cols_prod:
             conn.execute(text("ALTER TABLE products ADD COLUMN cost_price FLOAT DEFAULT 0.0"))
+        if 'show_on_whatsapp' not in cols_prod:
+            conn.execute(text("ALTER TABLE products ADD COLUMN show_on_whatsapp BOOLEAN DEFAULT TRUE"))
 
         # Colunas em variations
         cols_vars = [c['name'] for c in inspector.get_columns('product_variations')]

@@ -371,6 +371,7 @@ class ProductCreate(BaseModel):
     description: Optional[str] = None
     category_id: Optional[int] = None
     image_base64: Optional[str] = None
+    show_on_whatsapp: bool = True
     variations: list[VariationSchema]
 
 @app.get("/api/categories")
@@ -417,6 +418,7 @@ def get_products(request: Request, db: Session = Depends(get_db)):
             "category": p.category.name if p.category else "Sem Categoria",
             "price": p.base_price,
             "cost": p.cost_price,
+            "show_on_whatsapp": p.show_on_whatsapp,
             "image": p.image_base64,
             "variations": vars_list
         })
@@ -432,7 +434,8 @@ def create_product(data: ProductCreate, request: Request, db: Session = Depends(
         cost_price=data.cost_price,
         description=data.description,
         category_id=data.category_id,
-        image_base64=data.image_base64
+        image_base64=data.image_base64,
+        show_on_whatsapp=data.show_on_whatsapp
     )
     db.add(new_p)
     db.flush()
@@ -462,6 +465,7 @@ def update_product(product_id: int, data: ProductCreate, request: Request, db: S
     product.cost_price = data.cost_price
     product.description = data.description
     product.category_id = data.category_id
+    product.show_on_whatsapp = data.show_on_whatsapp
     if data.image_base64:
         product.image_base64 = data.image_base64
     

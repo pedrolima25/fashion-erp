@@ -30,5 +30,5 @@ COPY . .
 # Create tokens directory if it doesn't exist
 RUN mkdir -p tokens
 
-# Start the application
-CMD gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+# Start the application - Usando 1 worker fixo (uvicorn) para evitar conflitos de conexão no WhatsApp
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
