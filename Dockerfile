@@ -10,9 +10,11 @@ ENV PORT 8000
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    google-chrome-stable \
+# Install system dependencies and Google Chrome
+RUN apt-get update && apt-get install -y wget \
+    && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt install -y ./google-chrome-stable_current_amd64.deb \
+    && rm google-chrome-stable_current_amd64.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
