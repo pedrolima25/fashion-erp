@@ -337,34 +337,32 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
 def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
+    """Refatora a finalização para ser infalível."""
     try:
+        # 1. Carregar Dados Essenciais
         var_id = state.get('variation_id')
-        if not var_id:
-            return "❌ *Erro:* Detalhes do produto não encontrados. Por favor, reinicie seu pedido digitando *Menu*."
-            
         variation = db.query(ProductVariation).filter(ProductVariation.id == var_id).first()
         if not variation:
-            return "❌ *Erro:* O tamanho escolhido não está mais disponível. Por favor, escolha outro."
-            
+            return "❌ *Erro:* Produto não localizado. Digite *Menu* para recomeçar."
+        
         product = variation.product
-        if not product:
-            return "❌ *Erro:* Produto não encontrado."
-            
+        company = db.query(Company).filter(Company.id == company_id).first()
         client_name = state.get('client_name', 'Cliente')
         
-        # Cria ou Localiza Cliente
+        # 2. Cliente
         customer = db.query(Customer).filter(Customer.phone == client_phone, Customer.company_id == company_id).first()
         if not customer:
             customer = Customer(name=client_name, phone=client_phone, company_id=company_id)
             db.add(customer)
             db.flush()
         
-        # --- CRIAR VENDA NO BANCO DE DADOS ---
+        # 3. Calcular Valores
         item_price = variation.price_override if variation.price_override else product.base_price
         delivery_fee = state.get('delivery_fee', 0.0)
         total = item_price + delivery_fee
         payment_method = state.get('payment_method', 'PIX')
         
+        # 4. Criar Venda
         new_sale = Sale(
             company_id=company_id,
             customer_id=customer.id,
@@ -373,12 +371,12 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
             delivery_fee=delivery_fee,
             delivery_address=state.get('address'),
             payment_method=payment_method,
-            status="pending" # Sempre inicia pendente
+            status="pending"
         )
         db.add(new_sale)
         db.flush()
         
-        # Adiciona Item da Venda
+        # 5. Criar Item
         sale_item = SaleItem(
             sale_id=new_sale.id,
             product_id=product.id,
@@ -388,53 +386,46 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         )
         db.add(sale_item)
         
-        # Nota: Só deduzimos estoque e criamos financeiro na CONFIRMAÇÃO do dono no painel
-        # variation.stock_quantity -= 1
-        
+        # Commit imediato para garantir que a venda existe
         db.commit()
         
-        # --- NOTIFICAÇÃO DO MERCHANT ---
-        from whatsapp_service import whatsapp_manager
-        company = db.query(Company).filter(Company.id == company_id).first()
-        if not company:
-            return "❌ *Erro de configuração.* Empresa não encontrada."
+        # 6. Notificar Dono
+        try:
+            from whatsapp_service import whatsapp_manager
+            if company.whatsapp_number:
+                whatsapp_manager.notify_merchant_new_sale(company_id, new_sale.id, {
+                    "merchant_number": company.whatsapp_number,
+                    "customer_name": client_name,
+                    "product_name": product.name,
+                    "total": total,
+                    "payment_method": payment_method,
+                    "delivery_type": state.get('delivery_type')
+                })
+        except: pass
 
-        if company.whatsapp_number:
-            whatsapp_manager.notify_merchant_new_sale(company_id, new_sale.id, {
-                "merchant_number": company.whatsapp_number,
-                "customer_name": client_name,
-                "product_name": product.name,
-                "total": total,
-                "payment_method": payment_method,
-                "delivery_type": state.get('delivery_type')
-            })
-        
-        # --- RESPOSTA PARA O CLIENTE ---
+        # 7. Gerar Resposta PIX
         pix_info = ""
         if payment_method == "PIX":
             from payments import generate_pix_payment
             try:
                 pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
-                # Usamos |SPLIT| para enviar a chave em uma mensagem separada, facilitando o "copia e cola"
                 pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
                             f"{pix_res['qr_code']}\n\n"
                             f"💳 *Valor:* R$ {total:.2f}\n\n"
                             "💡 *Dica:* Copie o código acima e pague no seu banco.")
-            except Exception as e:
-                logger.error(f"Erro ao gerar PIX: {e}")
-                pix_info = "\n\n⚠️ *Aviso:* Tivemos um problema para gerar o QR Code PIX automático. Por favor, fale com um atendente para receber a chave."
+            except:
+                pix_info = "\n\n⚠️ *Aviso:* Chame um atendente para receber a chave PIX."
         
-        # Localização da Loja (Para Retirada ou Referência)
-        store_location_info = ""
+        # 8. Localização
+        store_info = ""
         if company.address:
-            store_location_info = f"\n\n📍 *Endereço da Loja:*\n{company.address}"
+            store_info = f"\n\n📍 *Endereço da Loja:*\n{company.address}"
             if company.location_link:
-                store_location_info += f"\n🗺️ *GPS:* {company.location_link}"
+                store_info += f"\n🗺️ *GPS:* {company.location_link}"
 
         is_pickup = state.get('delivery_type') == 'pickup'
-        resumo_logistica = "✅ *Retirada na Loja agendada!*" if is_pickup else f"🚚 *Entrega em:* {state['address']}"
+        resumo_logistica = "✅ *Retirada na Loja agendada!*" if is_pickup else f"🚚 *Entrega em:* {state.get('address')}"
         
-        # Emoji dinâmico para o resumo final
         final_emoji = get_category_emoji(product.name) if not "vestido" in product.name.lower() else "👗"
         
         resp = (f"🥳 *Pedido Recebido, {client_name}!*\n\n"
@@ -444,21 +435,22 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                 f"⭐ *TOTAL:* R$ {total:.2f}\n\n"
                 f"{resumo_logistica}\n"
                 f"💳 *Pagamento:* {payment_method}"
-                f"{store_location_info}\n\n"
+                f"{store_info}\n\n"
                 "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos tudo aqui! Obrigado! 🛍️"
                 f"{pix_info}")
         
-        # Limpa Estado APENAS no sucesso total da geração da resposta
-        rule_states[state_key] = {'active': False, 'step': 0}
+        # Limpa Estado NO FINAL
+        if state_key in rule_states:
+            del rule_states[state_key]
 
-        # Se for um dicionário (para lidar com o SPLIT), retornamos como tal
         if "|SPLIT|" in resp:
             return {"text": resp}
         return resp
+        
     except Exception as e:
-        logger.error(f"Erro finalize_whatsapp_sale: {e}")
+        logger.error(f"FATAL FINALIZE: {e}")
         db.rollback()
-        return "❌ *Erro ao processar pedido.* Por favor, tente novamente em instantes ou chame um atendente."
+        return "❌ *Erro ao processar pedido.* Por favor, tente novamente digitando *Menu*."
 
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
