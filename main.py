@@ -130,7 +130,9 @@ async def marketing_worker_task():
                         for pid in pids:
                             prod = db.query(Product).filter(Product.id == pid).first()
                             if prod:
-                                msg = f"✨ *NOVIDADE* ✨\n\n👗 {prod.name}\n\n💰 *VALOR:* R$ {prod.base_price:.2f}"
+                                company = db.query(Company).filter(Company.id == camp.company_id).first()
+                                comp_name = company.name.upper() if company else "NOVIDADE"
+                                msg = f"✨ *{comp_name}* ✨\n\n👗 {prod.name}\n\n💰 *VALOR:* R$ {prod.base_price:.2f}"
                                 if prod.description: msg += f"\n\n📝 {prod.description}"
                                 
                                 # --- ENVIAR PARA GRUPOS ---
@@ -292,10 +294,12 @@ def finance_page(request: Request):
     return templates.TemplateResponse(request, "financeiro.html", {"request": request, "active_page": "finance"})
 
 @app.get("/marketing", response_class=HTMLResponse)
-def marketing_page(request: Request):
+def marketing_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "marketing.html", {"request": request, "active_page": "marketing"})
+    cid = request.session.get("company_id")
+    company = db.query(Company).filter(Company.id == cid).first()
+    return templates.TemplateResponse(request, "marketing.html", {"request": request, "active_page": "marketing", "company": company})
 
 @app.get("/configuracoes", response_class=HTMLResponse)
 def settings_page(request: Request):
