@@ -387,8 +387,10 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         if payment_method == "PIX":
             from payments import generate_pix_payment
             pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
-            pix_info = (f"\n\n🔑 *CHAVE PIX ({company.pix_key}):*\n"
-                        f"```{pix_res['qr_code']}```\n\n"
+            # Usamos |SPLIT| para enviar a chave em uma mensagem separada, facilitando o "copia e cola"
+            pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
+                        f"{pix_res['qr_code']}\n\n"
+                        f"💳 *Valor:* R$ {total:.2f}\n\n"
                         "💡 *Dica:* Copie o código acima e pague no seu banco.")
         
         # Limpa Estado
@@ -403,14 +405,15 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                 f"{final_emoji} *Item:* {product.name} ({variation.size})\n"
                 f"💰 *Subtotal:* R$ {item_price:.2f}\n"
                 f"📦 *Frete:* R$ {delivery_fee:.2f}\n"
-                f"⭐ *TOTAL (Pendente):* R$ {total:.2f}\n\n"
+                f"⭐ *TOTAL:* R$ {total:.2f}\n\n"
                 f"{resumo_logistica}\n"
-                f"💳 *Pagamento:* {payment_method}{pix_info}\n\n"
-                "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos o envio aqui! Obrigado! 🛍️")
+                f"💳 *Pagamento:* {payment_method}\n\n"
+                "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos o envio aqui! Obrigado! 🛍️"
+                f"{pix_info}")
         
-        # Se for PIX, podemos mandar o QR Code como imagem se desejar, 
-        # mas para simplificar vamos mandar o link de copia e cola no texto.
-        
+        # Se for um dicionário (para lidar com o SPLIT), retornamos como tal
+        if "|SPLIT|" in resp:
+            return {"text": resp}
         return resp
     except Exception as e:
         db.rollback()
