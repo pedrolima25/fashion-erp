@@ -268,14 +268,8 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             state['delivery_type'] = 'pickup'
             state['delivery_fee'] = 0.0
             state['address'] = "Retirada na Loja"
-            state['step'] = 7 # Vai para escolha de pagamento
-            rule_states[state_key] = state
-            return (f"📍 *Retirada na Loja selecionada!* O endereço para buscar é:\n"
-                    f"{company.address if company.address else 'Endereço a ser confirmado'}\n\n"
-                    "Agora, como você prefere pagar?\n\n"
-                    "1️⃣ **PIX (Copia e Cola)**\n"
-                    "2️⃣ **Pagar na Retirada**\n\n"
-                    "Digite o número da opção desejada.")
+            state['payment_method'] = 'PIX' # Volta a ser direto PIX
+            return finalize_whatsapp_sale(client_phone, state, db, company_id, state_key)
         elif text == "2":
             state['delivery_type'] = 'delivery'
             
@@ -334,23 +328,8 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
         else:
             state['address'] = address
             
-        state['step'] = 7
-        rule_states[state_key] = state
-        
-        return (f"📍 *Endereço de entrega salvo!* Agora, como você prefere pagar?\n\n"
-                f"1️⃣ **PIX (Copia e Cola)**\n"
-                f"2️⃣ **Pagar na Entrega**\n\n"
-                "Digite o número da opção desejada.")
-
-    elif state['step'] == 7:
-        # Escolha do Pagamento
-        if text == "1":
-            state['payment_method'] = 'PIX'
-            return finalize_whatsapp_sale(client_phone, state, db, company_id, state_key)
-        elif text == "2":
-            state['payment_method'] = 'Pagamento Local'
-            return finalize_whatsapp_sale(client_phone, state, db, company_id, state_key)
-        return "❌ *Opção inválida.* Digite 1 para PIX ou 2 para Pagar Localmente."
+        state['payment_method'] = 'PIX' # Direto PIX como solicitado
+        return finalize_whatsapp_sale(client_phone, state, db, company_id, state_key)
 
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
