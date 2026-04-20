@@ -1,0 +1,314 @@
+{% extends "master.html" %}
+
+{% block title %}Vendas (PDV) | Fashion ERP{% endblock %}
+
+{% block header_title %}Frente de Caixa (PDV){% endblock %}
+
+{% block content %}
+<div class="pdv-container">
+    <!-- Coluna da Esquerda: Catálogo -->
+    <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column;">
+        <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+            <div style="position: relative; flex: 1;">
+                <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                <input type="text" id="search-product" placeholder="Buscar produto por nome ou código..." style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
+            </div>
+            <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;">
+                <option value="">Todas Categorias</option>
+            </select>
+        </div>
+
+        <div id="product-grid" class="pdv-products">
+            <!-- Produtos injetados via JS -->
+            <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 5rem;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom: 1rem;"></i>
+                <p>Carregando catálogo...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna da Direita: Carrinho -->
+    <div class="glass pdv-cart" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-shopping-bag" style="color: var(--primary);"></i> Carrinho
+        </h3>
+        
+        <div id="cart-items" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Itens do carrinho -->
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                <p>O carrinho está vazio.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">R$ 0,00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                <span>Desconto</span>
+                <input type="number" id="cart-discount" value="0" step="0.5" style="width: 80px; text-align: right; background: transparent; border: none; color: var(--secondary); font-weight: 600;" onchange="updateCartTotals()">
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem;">
+                <span>Total</span>
+                <span id="cart-total" style="color: var(--primary);">R$ 0,00</span>
+            </div>
+
+            <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Logística</label>
+                    <select id="delivery-type" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;" onchange="toggleAddressField(this.value)">
+                        <option value="pickup">Retirada</option>
+                        <option value="delivery">Entrega</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Pagamento</label>
+                    <select id="payment-method" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;">
+                        <option value="PIX">PIX</option>
+                        <option value="Cartão">Cartão</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="address-container" style="display: none; margin-top: 0.75rem;">
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Endereço Completo</label>
+                <textarea id="delivery-address" placeholder="Rua, Bairro, Ponto de Referência..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; height: 60px; font-size: 0.85rem; resize: none;"></textarea>
+            </div>
+
+            <button onclick="finalizeSale()" id="btn-finalize" class="btn btn-primary" style="width: 100%; margin-top: 1rem; justify-content: center; height: 50px;">
+                <i class="fas fa-check"></i> Finalizar Venda
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Variações -->
+<div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 400px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+    <h3 id="modal-title" style="margin-bottom: 1.5rem;">Escolha o Tamanho</h3>
+    <div id="variation-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 2rem;">
+        <!-- Variações injetadas -->
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <button onclick="closeModal()" class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancelar</button>
+    </div>
+</div>
+<div id="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 999;"></div>
+
+<script>
+    let products = [];
+    let cart = [];
+    let activeProduct = null;
+
+    async function loadProducts() {
+        const res = await fetch('/api/products');
+        products = await res.json();
+        renderProducts(products);
+    }
+
+    async function loadCategories() {
+        const res = await fetch('/api/categories');
+        const cats = await res.json();
+        const select = document.getElementById('filter-category');
+        select.innerHTML = '<option value="">Todas Categorias</option>';
+        cats.forEach(c => {
+            select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+        });
+    }
+
+    function renderProducts(list) {
+        const grid = document.getElementById('product-grid');
+        grid.innerHTML = '';
+        list.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'glass glass-card';
+            card.style.padding = '0.75rem';
+            card.style.cursor = 'pointer';
+            card.onclick = () => openVariationModal(p);
+            
+            const imgHtml = p.image 
+                ? `<img src="${p.image}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 0.75rem;">`
+                : `<div style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
+                    <i class="fas fa-tshirt" style="font-size: 2rem; opacity: 0.2;"></i>
+                   </div>`;
+
+            card.innerHTML = `
+                ${imgHtml}
+                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
+                <div style="color: var(--primary); font-weight: 700;">R$ ${p.price.toFixed(2)}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function openVariationModal(p) {
+        activeProduct = p;
+        const modal = document.getElementById('variation-modal');
+        const overlay = document.getElementById('modal-overlay');
+        const list = document.getElementById('variation-list');
+        document.getElementById('modal-title').innerText = p.name;
+        
+        list.innerHTML = '';
+        p.variations.forEach(v => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary';
+            btn.style.fontSize = '0.8rem';
+            btn.style.flexDirection = 'column';
+            btn.style.height = 'auto';
+            btn.style.padding = '0.75rem 0.5rem';
+            
+            const colorHtml = v.color ? `<span style="font-size: 0.7rem; opacity: 0.6; display: block;">${v.color}</span>` : '';
+            btn.innerHTML = `
+                <span style="font-weight: 700;">${v.size}</span>
+                ${colorHtml}
+            `;
+            
+            btn.onclick = () => addToCart(p, v);
+            if (v.stock <= 0) {
+                btn.disabled = true;
+                btn.style.opacity = '0.3';
+                btn.innerHTML += ' <span style="font-size: 0.6rem; display: block;">(Esgotado)</span>';
+            }
+            list.appendChild(btn);
+        });
+
+        modal.style.display = 'block';
+        overlay.style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('variation-modal').style.display = 'none';
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
+
+    function addToCart(p, v) {
+        const existing = cart.find(item => item.variation_id === v.id);
+        if (existing) {
+            existing.quantity++;
+        } else {
+            cart.push({
+                product_id: p.id,
+                variation_id: v.id,
+                name: p.name,
+                size: v.size,
+                color: v.color || "",
+                price: v.price || p.price,
+                quantity: 1
+            });
+        }
+        renderCart();
+        closeModal();
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cart-items');
+        container.innerHTML = '';
+        if (cart.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;"><p>O carrinho está vazio.</p></div>';
+        } else {
+            cart.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'glass';
+                div.style.padding = '1rem';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">${item.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">Tam: ${item.size} ${item.color ? '| ' + item.color : ''} | R$ ${item.price.toFixed(2)}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="number" value="${item.quantity}" style="width: 50px; background: rgba(0,0,0,0.2); border: none; color: white; padding: 0.25rem; border-radius: 4px; text-align: center;" onchange="updateQty(${index}, this.value)">
+                        <button onclick="removeFromCart(${index})" style="background: none; border: none; color: var(--secondary); cursor: pointer;"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        updateCartTotals();
+    }
+
+    function updateQty(index, qty) {
+        cart[index].quantity = parseInt(qty);
+        updateCartTotals();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCart();
+    }
+
+    function updateCartTotals() {
+        const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+        const total = Math.max(0, subtotal - discount);
+        
+        document.getElementById('cart-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+        document.getElementById('cart-total').innerText = `R$ ${total.toFixed(2)}`;
+    }
+
+    async function finalizeSale() {
+        if (cart.length === 0) return alert('Carrinho vazio!');
+        
+        const btn = document.getElementById('btn-finalize');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+        const data = {
+            items: cart.map(item => ({
+                product_id: item.product_id,
+                variation_id: item.variation_id,
+                quantity: item.quantity,
+                price: item.price
+            })),
+            payment_method: document.getElementById('payment-method').value,
+            discount: parseFloat(document.getElementById('cart-discount').value) || 0,
+            delivery_type: document.getElementById('delivery-type').value,
+            delivery_address: document.getElementById('delivery-address').value
+        };
+
+        try {
+            const res = await fetch('/api/sales', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                alert('Venda finalizada com sucesso!');
+                cart = [];
+                renderCart();
+                document.getElementById('cart-discount').value = 0;
+                loadProducts();
+            } else {
+                alert('Erro ao finalizar venda.');
+            }
+        } catch (e) {
+            alert('Falha na conexão.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Finalizar Venda';
+        }
+    }
+
+    document.getElementById('search-product').onkeyup = (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = products.filter(p => p.name.toLowerCase().includes(query));
+        renderProducts(filtered);
+    };
+
+    function toggleAddressField(val) {
+        document.getElementById('address-container').style.display = val === 'delivery' ? 'block' : 'none';
+    }
+
+    document.getElementById('filter-category').onchange = (e) => {
+        const cat = e.target.value;
+        const filtered = cat ? products.filter(p => p.category === cat) : products;
+        renderProducts(filtered);
+    };
+
+    loadCategories();
+    loadProducts();
+</script>
+{% endblock %}

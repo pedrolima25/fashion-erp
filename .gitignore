@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+ENV/
+
+# Databases
+fashion.db
+*.db-journal
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+tokens/
+sessions/
+logs/
+*.log

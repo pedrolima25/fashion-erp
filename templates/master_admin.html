@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin | Fashion ERP</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="padding-top: 2rem;">
+    <div class="main-layout" style="margin-left: 0; max-width: 1200px; margin: 0 auto;">
+        <header>
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 700;">Painel <span style="color: var(--primary);">Master</span></h1>
+                <p style="color: var(--text-muted);">Controle de Unidades e Assinaturas (Alessandro)</p>
+            </div>
+            <a href="/logout" class="btn btn-secondary"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="glass glass-card">
+                <div class="widget-title">Total de Lojas</div>
+                <div class="widget-value" id="total-lojas">0</div>
+            </div>
+            <div class="glass glass-card">
+                <div class="widget-title">Assinaturas Ativas</div>
+                <div class="widget-value" id="total-assinaturas">0</div>
+            </div>
+            <div class="glass glass-card">
+                <div class="widget-title">Receita Mensal Est.</div>
+                <div class="widget-value" id="receita-mensal">R$ 0,00</div>
+            </div>
+        </div>
+
+        <div class="glass" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.25rem;">Gerenciamento de Unidades</h3>
+                <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Nova Unidade</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Loja</th>
+                        <th>Status</th>
+                        <th>Vencimento</th>
+                        <th>WhatsApp</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-unidades">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                            Buscando unidades no sistema...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-nova-loja" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+        <div class="glass" style="max-width: 500px; width: 100%; padding: 2rem; border: 1px solid var(--primary); box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Cadastrar <span style="color: var(--primary);">Nova Unidade</span></h3>
+                <button onclick="closeModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="form-nova-loja" onsubmit="event.preventDefault(); createCompany();">
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Loja</label>
+                    <input type="text" id="store-name" required placeholder="Ex: Fashion Filial 2" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Categoria</label>
+                    <input type="text" id="store-cat" value="Loja de Roupas" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 1.5rem 0;">
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Usuário Admin</label>
+                    <input type="text" id="admin-user" required placeholder="Ex: admin_filial" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                <div style="margin-bottom: 2rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Senha Inicial</label>
+                    <input type="password" id="admin-pass" required placeholder="••••••••" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 3.5rem;">Criar Unidade e Acesso</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Unidade -->
+    <div id="modal-editar-loja" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+        <div class="glass" style="max-width: 500px; width: 100%; padding: 2rem; border: 1px solid var(--accent); box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Editar <span style="color: var(--accent);">Unidade</span></h3>
+                <button onclick="closeEditModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="form-editar-loja" onsubmit="event.preventDefault(); updateCompany();">
+                <input type="hidden" id="edit-cid">
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Loja</label>
+                    <input type="text" id="edit-store-name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Categoria</label>
+                    <input type="text" id="edit-store-cat" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 0.75rem; border-radius: 10px; color: white;">
+                </div>
+                <div style="margin-bottom: 2rem;">
+                    <label style="display: block; font-size: 0.8rem; color: var(--accent); margin-bottom: 0.5rem; font-weight: 700;">📅 Data de Vencimento Manuel</label>
+                    <input type="date" id="edit-store-expiry" style="width: 100%; background: rgba(16, 185, 129,0.1); border: 1px solid var(--accent); padding: 0.75rem; border-radius: 10px; color: white; color-scheme: dark;">
+                    <p style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.5rem;">Ajuste o calendário acima para mudar o dia do bloqueio.</p>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 3.5rem; background: var(--accent);">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal() { document.getElementById('modal-nova-loja').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modal-nova-loja').style.display = 'none'; }
+
+        function openEditModal(cid, name, cat, expiry) {
+            document.getElementById('edit-cid').value = cid;
+            document.getElementById('edit-store-name').value = name;
+            document.getElementById('edit-store-cat').value = cat;
+            
+            // Converte DD/MM/YYYY para YYYY-MM-DD para o input date
+            if (expiry && expiry.includes('/')) {
+                const parts = expiry.split('/');
+                const dateISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                document.getElementById('edit-store-expiry').value = dateISO;
+            }
+            
+            document.getElementById('modal-editar-loja').style.display = 'flex';
+        }
+
+        function closeEditModal() { document.getElementById('modal-editar-loja').style.display = 'none'; }
+
+        async function updateCompany() {
+            const cid = document.getElementById('edit-cid').value;
+            const data = {
+                name: document.getElementById('edit-store-name').value,
+                category: document.getElementById('edit-store-cat').value,
+                expiry_date: document.getElementById('edit-store-expiry').value
+            };
+
+            const res = await fetch(`/api/master/companies/${cid}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert("Unidade atualizada com sucesso! ✅");
+                closeEditModal();
+                loadMasterData();
+            } else {
+                const err = await res.json();
+                alert("Erro ao atualizar: " + err.error);
+            }
+        }
+
+        async function createCompany() {
+            const data = {
+                name: document.getElementById('store-name').value,
+                category: document.getElementById('store-cat').value,
+                admin_username: document.getElementById('admin-user').value,
+                admin_password: document.getElementById('admin-pass').value
+            };
+
+            const res = await fetch('/api/master/companies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (res.ok) {
+                alert("Unidade criada com sucesso! 🚀");
+                closeModal();
+                document.getElementById('form-nova-loja').reset();
+                loadMasterData();
+            } else {
+                alert("Erro: " + result.error);
+            }
+        }
+        async function loadMasterData() {
+            try {
+                // Carregar Stats
+                const statsRes = await fetch('/api/master/stats');
+                const stats = await statsRes.json();
+                document.getElementById('total-lojas').innerText = stats.total_lojas;
+                document.getElementById('total-assinaturas').innerText = stats.ativas;
+                document.getElementById('receita-mensal').innerText = `R$ ${stats.receita_mensal.toFixed(2)}`;
+
+                // Carregar Unidades
+                const compRes = await fetch('/api/master/companies');
+                const companies = await compRes.json();
+                const list = document.getElementById('lista-unidades');
+                list.innerHTML = '';
+
+                companies.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.id}</td>
+                        <td style="font-weight: 600;">${c.name}</td>
+                        <td><span class="status-badge ${c.active ? 'status-online' : 'status-offline'}">${c.active ? 'Ativa' : 'Inativa'}</span></td>
+                        <td>${c.expiry}</td>
+                        <td><span style="font-size: 0.8rem; font-weight: 600; color: ${c.whatsapp_status === 'CONNECTED' ? '#25d366' : '#94a3b8'};">${c.whatsapp_status}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; background: rgba(255,255,255,0.05);" onclick="openEditModal(${c.id}, '${c.name}', '${c.category}', '${c.expiry}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem;" onclick="extendSub(${c.id})"><i class="fas fa-calendar-plus"></i> +30 Dias</button>
+                                <button class="btn btn-secondary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; color: ${c.active ? 'var(--secondary)' : 'var(--accent)'};" onclick="toggleComp(${c.id})">
+                                    <i class="fas ${c.active ? 'fa-lock' : 'fa-unlock'}"></i> ${c.active ? 'Bloquear' : 'Ativar'}
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            } catch (e) {
+                console.error("Master Admin error", e);
+            }
+        }
+
+        async function extendSub(cid) {
+            if(!confirm("Deseja estender a assinatura em +30 dias?")) return;
+            const formData = new FormData();
+            formData.append('days', 30);
+            const res = await fetch(`/api/master/companies/${cid}/extend`, { method: 'POST', body: formData });
+            if (res.ok) {
+                loadMasterData();
+                alert("Assinatura estendida com sucesso! ✨");
+            }
+        }
+
+        async function toggleComp(cid) {
+            const res = await fetch(`/api/master/companies/${cid}/toggle`, { method: 'POST' });
+            if (res.ok) {
+                loadMasterData();
+            }
+        }
+
+        loadMasterData();
+    </script>
+</body>
+</html>

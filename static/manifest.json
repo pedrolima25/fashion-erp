@@ -1,0 +1,17 @@
+{
+  "name": "Fashion ERP Pro",
+  "short_name": "FashionPro",
+  "start_url": "/painel",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "description": "Sistema de Gestão e Automação para Loja de Roupas",
+  "icons": [
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{% extends "master.html" %}
+
+{% block title %}Configurações | Fashion ERP{% endblock %}
+
+{% block header_title %}Configurações do Sistema{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: 1.5fr 1fr;">
+    <!-- Dados da Loja -->
+    <div class="glass" style="padding: 2rem;">
+        <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fas fa-store" style="color: var(--primary);"></i> Perfil da Loja
+        </h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Unidade</label>
+                <input type="text" id="conf-name" value="Fashion Store Premium" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Celular / WhatsApp</label>
+                    <input type="text" id="conf-phone" placeholder="(00) 00000-0000" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Chave PIX (CNPJ/E-mail/Tel)</label>
+                    <input type="text" id="conf-pix" placeholder="Sua chave PIX" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço e Localização</label>
+                <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Logística -->
+    <div class="glass" style="padding: 2rem; margin-top: 1.5rem;">
+        <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fas fa-truck" style="color: var(--secondary);"></i> Logística e Entrega
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Tipo de Cobrança de Entrega</label>
+                <select id="conf-delivery-mode" onchange="toggleLogisticsView(this.value)" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    <option value="fixed">Taxa Única (Fixa)</option>
+                    <option value="neighborhood">Por Bairro (Variável)</option>
+                </select>
+            </div>
+
+            <div id="view-fixed-fee">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Taxa de Entrega Padrão (R$)</label>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <input type="number" id="conf-delivery-fee" step="0.01" value="0.00" style="flex: 1; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">Taxa fixa cobrada no Zap</span>
+                </div>
+            </div>
+
+            <div id="view-neighborhoods" style="display: none;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Gerenciar Bairros e Taxas</label>
+                
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <input type="text" id="new-nb-name" placeholder="Nome do Bairro" style="flex: 2; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+                    <input type="number" id="new-nb-fee" placeholder="R$" style="flex: 1; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+                    <button class="btn btn-primary" onclick="addNeighborhood()" style="padding: 0.6rem 1rem;"><i class="fas fa-plus"></i></button>
+                </div>
+
+                <div style="max-height: 250px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--glass-border);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead style="background: rgba(255,255,255,0.05);">
+                            <tr>
+                                <th style="padding: 0.75rem; text-align: left;">Bairro</th>
+                                <th style="padding: 0.75rem; text-align: left;">Taxa</th>
+                                <th style="padding: 0.75rem; text-align: center;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="neighborhood-list">
+                            <!-- Injetado via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+                Esta taxa será somada automaticamente quando o cliente escolher a opção de **Entrega** no WhatsApp Bot.
+            </p>
+        </div>
+    </div>
+
+    <!-- Conexão Bot -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="glass" style="padding: 2rem;">
+            <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fab fa-whatsapp" style="color: #25d366;"></i> WhatsApp Bot
+            </h3>
+            
+            <div id="wpp-management-ui">
+                <div style="text-align: center; padding: 1.5rem;">
+                    <div id="wpp-qr-container" style="background: white; width: 200px; height: 200px; margin: 0 auto 1.5rem auto; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <i class="fas fa-qrcode fa-5x" style="color: #eee;"></i>
+                    </div>
+                    <p id="wpp-desc" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Clique no botão abaixo para gerar o QR Code de conexão.</p>
+                    <button onclick="startWhatsAppConnection()" class="btn btn-primary" style="width: 100%; justify-content: center; background: #25d366;">
+                        <i class="fas fa-sync"></i> Gerar Novo QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass" style="padding: 1.5rem; border-left: 4px solid var(--secondary);">
+            <h4 style="color: var(--secondary); margin-bottom: 0.5rem;">Zona de Perigo</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Limpar a sessão do WhatsApp desconectará o bot permanentemente até um novo pareamento.</p>
+            <button onclick="alert('Sessão resetada')" class="btn btn-secondary" style="color: var(--secondary); border-color: rgba(244, 63, 94, 0.2); width: 100%; justify-content: center; font-size: 0.8rem;">
+                Resetar Sessão do Robô
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadSettings() {
+        try {
+            const res = await fetch('/api/config');
+            const data = await res.json();
+            if (data.error) return;
+            
+            document.getElementById('conf-name').value = data.name || '';
+            document.getElementById('conf-phone').value = data.whatsapp_number || '';
+            document.getElementById('conf-pix').value = data.pix_key || '';
+            document.getElementById('conf-address').value = data.address || '';
+            document.getElementById('conf-delivery-fee').value = data.delivery_fee || 0;
+            const mode = data.delivery_mode || 'fixed';
+            document.getElementById('conf-delivery-mode').value = mode;
+            toggleLogisticsView(mode);
+            if (mode === 'neighborhood') loadNeighborhoods();
+        } catch (e) {
+            console.error('Erro ao carregar configurações:', e);
+        }
+    }
+
+    function toggleLogisticsView(mode) {
+        document.getElementById('view-fixed-fee').style.display = mode === 'fixed' ? 'block' : 'none';
+        document.getElementById('view-neighborhoods').style.display = mode === 'neighborhood' ? 'block' : 'none';
+        if (mode === 'neighborhood') loadNeighborhoods();
+    }
+
+    async function loadNeighborhoods() {
+        const res = await fetch('/api/neighborhoods');
+        const items = await res.json();
+        const list = document.getElementById('neighborhood-list');
+        list.innerHTML = '';
+        items.forEach(nb => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 0.75rem; border-top: 1px solid var(--glass-border);">${nb.name}</td>
+                <td style="padding: 0.75rem; border-top: 1px solid var(--glass-border); font-weight: 600;">R$ ${nb.fee.toFixed(2)}</td>
+                <td style="padding: 0.75rem; border-top: 1px solid var(--glass-border); text-align: center;">
+                    <button onclick="deleteNeighborhood(${nb.id})" style="background: none; border: none; color: var(--secondary); cursor: pointer;"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            list.appendChild(tr);
+        });
+    }
+
+    async function addNeighborhood() {
+        const name = document.getElementById('new-nb-name').value;
+        const fee = parseFloat(document.getElementById('new-nb-fee').value);
+        if (!name || isNaN(fee)) return alert('Preencha nome e valor corretamente.');
+
+        await fetch('/api/neighborhoods', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, fee })
+        });
+        document.getElementById('new-nb-name').value = '';
+        document.getElementById('new-nb-fee').value = '';
+        loadNeighborhoods();
+    }
+
+    async function deleteNeighborhood(id) {
+        if (!confirm('Deseja excluir este bairro?')) return;
+        await fetch(`/api/neighborhoods/${id}`, { method: 'DELETE' });
+        loadNeighborhoods();
+    }
+
+    async function saveSettings() {
+        const name = document.getElementById('conf-name').value;
+        const whatsapp_number = document.getElementById('conf-phone').value;
+        const pix_key = document.getElementById('conf-pix').value;
+        const address = document.getElementById('conf-address').value;
+        const delivery_fee = parseFloat(document.getElementById('conf-delivery-fee').value) || 0;
+        const delivery_mode = document.getElementById('conf-delivery-mode').value;
+
+        try {
+            const res = await fetch('/api/config/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, whatsapp_number, pix_key, address, delivery_fee, delivery_mode })
+            });
+
+            if (res.ok) {
+                showToast('Configurações salvas com sucesso!');
+            } else {
+                alert('Erro ao salvar.');
+            }
+        } catch (e) {
+            alert('Erro de conexão.');
+        }
+    }
+
+    function showToast(msg) {
+        // Aproveita o toast do dashboard se disponível ou cria alert simples
+        alert(msg);
+    }
+
+    async function startWhatsAppConnection() {
+        try {
+            await fetch('/api/whatsapp/start', {method: 'POST'});
+            document.getElementById('wpp-desc').innerText = 'Conectando... Aguarde o QR Code aparecer (isso pode levar até 30 segundos).';
+            pollStatus();
+        } catch (e) {
+            alert('Erro ao iniciar conexão.');
+        }
+    }
+
+    async function pollStatus() {
+        try {
+            const res = await fetch('/api/whatsapp/status');
+            const data = await res.json();
+            const qrContainer = document.getElementById('wpp-qr-container');
+            
+            if (data.qr_code) {
+                qrContainer.innerHTML = `<img src="${data.qr_code}" style="width: 100%; height: 100%; object-fit: contain;">`;
+            }
+
+            if (data.status === 'CONNECTED') {
+                qrContainer.innerHTML = `<i class="fas fa-check-circle fa-5x" style="color: #25d366;"></i>`;
+                document.getElementById('wpp-desc').innerText = '✅ Bot Conectado e Ativo!';
+                return;
+            }
+
+            setTimeout(pollStatus, 3000);
+        } catch (e) {
+            setTimeout(pollStatus, 5000);
+        }
+    }
+
+    loadSettings();
+    pollStatus(); // Verifica status ao entrar
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Fashion ERP Pro</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: #020617;
+            overflow: hidden;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            z-index: 10;
+        }
+        .login-card {
+            padding: 3rem 2.5rem;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        .bg-blur {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.2;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-blur" style="background: var(--primary); top: -100px; left: -100px;"></div>
+    <div class="bg-blur" style="background: var(--secondary); bottom: -100px; right: -100px;"></div>
+
+    <div class="login-container">
+        <div class="glass login-card">
+            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);">
+                <i class="ph-bold ph-sketch-logo" style="color: white; font-size: 2rem;"></i>
+            </div>
+            
+            <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Bem-vindo ao <span style="color: var(--primary);">PRO</span></h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2.5rem;">Acesse sua conta para gerenciar seu estoque e vendas.</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Usuário</label>
+                    <input type="text" id="username" placeholder="Seu nome de usuário" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+
+                <div id="login-error" style="display: none; background: rgba(244, 63, 94, 0.1); color: var(--secondary); padding: 0.75rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1.5rem; font-weight: 600; border: 1px solid rgba(244, 63, 94, 0.2);">
+                    Usuário ou senha incorretos.
+                </div>
+
+                <button type="submit" id="btn-login" class="btn btn-primary" style="width: 100%; justify-content: center; height: 50px; font-size: 1rem; border-radius: 12px; background: linear-gradient(to right, var(--primary), var(--primary-hover));">
+                    Entrar no Painel <i class="ph-bold ph-arrow-right" style="margin-left: 0.5rem;"></i>
+                </button>
+            </form>
+
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                <p style="font-size: 0.75rem; color: var(--text-muted);">
+                    Não tem uma conta? <a href="#" style="color: var(--primary); text-decoration: none; font-weight: 600;">Contate o suporte</a>
+                </p>
+            </div>
+        </div>
+        
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.7rem; color: #475569; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">
+            Fashion ERP Pro &copy; 2026 | Alessandro
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login');
+            const error = document.getElementById('login-error');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Autenticando...';
+            error.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('username', document.getElementById('username').value);
+            formData.append('password', document.getElementById('password').value);
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    window.location.href = '/painel';
+                } else {
+                    error.innerText = data.error || 'Falha no login.';
+                    error.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerHTML = 'Entrar no Painel <i class="ph-bold ph-arrow-right" style="margin-left: 0.5rem;"></i>';
+                }
+            } catch (err) {
+                error.innerText = 'Erro de conexão com o servidor.';
+                error.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = 'Entrar no Painel <i class="ph-bold ph-arrow-right" style="margin-left: 0.5rem;"></i>';
+            }
+        }
+    </script>
+</body>
+</html>

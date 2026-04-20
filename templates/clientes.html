@@ -1,0 +1,55 @@
+{% extends "master.html" %}
+
+{% block title %}Clientes | Fashion ERP{% endblock %}
+
+{% block header_title %}Gestão de Clientes{% endblock %}
+
+{% block content %}
+<div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="font-size: 1.25rem; margin-bottom: 0.25rem;">Base de Clientes</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Gerencie informações e histórico de compras.</p>
+        </div>
+        <div style="display: flex; gap: 1rem; flex: 1; max-width: 500px;">
+            <input type="text" id="search-client" placeholder="Buscar por nome ou celular..." style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
+            <button class="btn btn-primary" onclick="alert('Funcionalidade em desenvolvimento')"><i class="fas fa-plus"></i> Novo</button>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Celular / WhatsApp</th>
+                <th>E-mail</th>
+                <th>Total Comprado</th>
+                <th>Última Compra</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="client-list">
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    Buscando clientes no banco...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function loadClients() {
+        // Placeholder até integrar a API em main.py
+        const container = document.getElementById('client-list');
+        container.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    Nenhum cliente cadastrado ainda.
+                </td>
+            </tr>
+        `;
+    }
+    loadClients();
+</script>
+{% endblock %}

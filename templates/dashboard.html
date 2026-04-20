@@ -1,0 +1,255 @@
+{% extends "master.html" %}
+
+{% block title %}Dashboard | Fashion ERP Pro{% endblock %}
+
+{% block header_title %}Painel de Controle{% endblock %}
+
+{% block content %}
+<!-- Modal de Confirmação Customizado (Anti-Bloqueio) -->
+<div id="custom-confirm-modal" style="display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); align-items: center; justify-content: center; padding: 2rem;">
+    <div class="glass" style="max-width: 400px; width: 100%; padding: 2rem; border: 2px solid var(--primary); box-shadow: 0 0 30px rgba(99, 102, 241, 0.4); text-align: center; border-radius: 20px;">
+        <div style="background: rgba(99, 102, 241, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+            <i class="ph-bold ph-question" style="color: var(--primary); font-size: 2rem;"></i>
+        </div>
+        <h3 id="confirm-title" style="margin-bottom: 1rem; font-size: 1.25rem;">Confirmar Ação?</h3>
+        <p id="confirm-body" style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">Deseja confirmar o recebimento do pagamento deste pedido?</p>
+        <div style="display: flex; gap: 1rem;">
+            <button id="confirm-btn-cancel" class="btn btn-secondary" style="flex: 1; justify-content: center;">Não, Voltar</button>
+            <button id="confirm-btn-ok" class="btn btn-primary" style="flex: 1; justify-content: center; background: #10b981;">Sim, Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Audio para Notificação -->
+<audio id="audio-tick" preload="auto" style="display: none;">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+
+<div class="dashboard-grid">
+    <!-- Vendas Hoje -->
+    <div class="glass glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="widget-title">Faturamento (Hoje)</div>
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center;">
+                <i class="ph ph-trend-up" style="color: var(--primary); font-size: 1.25rem;"></i>
+            </div>
+        </div>
+        <div class="widget-value" id="val-vendas-hoje">R$ 0,00</div>
+    </div>
+
+    <!-- Pedidos Pendentes -->
+    <div class="glass glass-card" style="border: 1px solid #ffbf00; box-shadow: 0 0 15px rgba(255, 191, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="widget-title" style="color: #ffbf00;">Pendentes</div>
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(255, 191, 0, 0.1); display: flex; align-items: center; justify-content: center;">
+                <i class="ph ph-hand-coins" style="color: #ffbf00; font-size: 1.25rem;"></i>
+            </div>
+        </div>
+        <div class="widget-value" id="val-pendentes" style="color: #ffbf00;">0</div>
+    </div>
+
+    <!-- Clientes -->
+    <div class="glass glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="widget-title">Clientes</div>
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center;">
+                <i class="ph ph-users-three" style="color: var(--accent); font-size: 1.25rem;"></i>
+            </div>
+        </div>
+        <div class="widget-value" id="val-clientes">0</div>
+    </div>
+
+    <!-- Status do Bot -->
+    <div class="glass glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="widget-title">Bot WhatsApp</div>
+            <div id="val-bot-status" style="font-weight: 700;">Localizando...</div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+    <div class="glass" style="padding: 1.5rem;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="ph ph-clock-counter-clockwise"></i> Últimos Pedidos</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0 10px;">
+                <thead>
+                    <tr style="text-align: left; color: var(--text-muted); font-size: 0.8rem;">
+                        <th>Pedido</th>
+                        <th>Hora</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="vendas-recentes">
+                    <tr><td colspan="6" style="text-align: center; padding: 3rem;">Iniciando sistema...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="glass" style="padding: 1.5rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Ajuda Rápida</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
+            💡 Clique no <strong>Botão Verde</strong> apenas após confirmar que o PIX caiu na sua conta ou o pagamento local foi recebido.
+        </p>
+        <button onclick="window.location.reload()" class="btn btn-secondary" style="width: 100%; margin-top: 1.5rem; justify-content: center;">
+            <i class="ph ph-arrows-clockwise"></i> Recarregar Painel
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- BLOQUEIO DE DUPLICIDADE (SCRIPT GUARD) ---
+    if (window.DASHBOARD_INITIALIZED_V5) {
+        console.warn("⚠️ Dashboard já inicializado. Ignorando duplicata.");
+    } else {
+        window.DASHBOARD_INITIALIZED_V5 = true;
+        console.log("🚀 Inicializando Dashboard Fashion ERP V5...");
+
+        let lastSaleId = 0;
+        let pendingCount = 0;
+        let currentActionId = null;
+        let currentActionType = null;
+
+        // --- SISTEMA DE MODAL CUSTOMIZADO ---
+        const modal = document.getElementById('custom-confirm-modal');
+        const modalTitle = document.getElementById('confirm-title');
+        const modalBody = document.getElementById('confirm-body');
+        const btnOk = document.getElementById('confirm-btn-ok');
+        const btnCancel = document.getElementById('confirm-btn-cancel');
+
+        function openConfirm(id, action) {
+            currentActionId = id;
+            currentActionType = action;
+            
+            if (action === 'confirm') {
+                modalTitle.innerText = "Confirmar Pagamento?";
+                modalBody.innerText = `Você confirma que o valor do Pedido #${id} já está na sua conta? Isso baixará o estoque automaticamente.`;
+                btnOk.style.background = "#10b981";
+                btnOk.innerText = "Sim, Recebido!";
+            } else {
+                modalTitle.innerText = "Cancelar Pedido?";
+                modalBody.innerText = `Tem certeza que deseja cancelar o Pedido #${id}?`;
+                btnOk.style.background = "#ef4444";
+                btnOk.innerText = "Sim, Cancelar";
+            }
+            modal.style.display = 'flex';
+        }
+
+        btnCancel.onclick = () => modal.style.display = 'none';
+        
+        btnOk.onclick = async () => {
+            modal.style.display = 'none';
+            const endpoint = currentActionType === 'confirm' ? 'confirm' : 'cancel';
+            
+            try {
+                const res = await fetch(`/api/sales/${currentActionId}/${endpoint}`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(currentActionType === 'confirm' ? 'Pagamento Confirmado!' : 'Pedido Cancelado');
+                    loadStats();
+                } else {
+                    alert(`Erro: ${data.error || 'Falha ao processar'}`);
+                }
+            } catch (e) {
+                alert('Erro de conexão ao processar pedido.');
+            }
+        };
+
+        // --- EVENT DELEGATION ROBUSTO ---
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.action-btn');
+            if (!btn) return;
+            
+            const id = btn.getAttribute('data-id');
+            const action = btn.getAttribute('data-action');
+            openConfirm(id, action);
+        });
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'glass';
+            toast.style.position = 'fixed';
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.padding = '1rem 1.5rem';
+            toast.style.zIndex = '11000';
+            toast.style.border = '2px solid var(--primary)';
+            toast.style.background = '#0f172a';
+            toast.innerHTML = `<strong>${message}</strong>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/dashboard/stats');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('val-vendas-hoje').innerText = `R$ ${data.vendas_hoje.toFixed(2)}`;
+                document.getElementById('val-clientes').innerText = data.total_clientes;
+                document.getElementById('val-pendentes').innerText = data.pedidos_pendentes;
+
+                if (lastSaleId !== 0 && data.last_sale_id > lastSaleId) {
+                    const audio = document.getElementById('audio-tick');
+                    if (audio) audio.play().catch(e => {});
+                    showToast('Nova venda recebida!');
+                }
+                lastSaleId = data.last_sale_id;
+
+                let html = '';
+                data.vendas_recentes.forEach(v => {
+                    let stHtml = '';
+                    let acHtml = '';
+
+                    if (v.status === 'pending') {
+                        stHtml = `<span style="background: #ffbf00; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">PENDENTE</span>`;
+                        acHtml = `
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <button class="action-btn" data-id="${v.id}" data-action="confirm" style="background: #10b981; color: white; border: none; padding: 8px; border-radius: 8px; cursor: pointer;">
+                                    <i class="ph-bold ph-check"></i>
+                                </button>
+                                <button class="action-btn" data-id="${v.id}" data-action="cancel" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,60,60,0.2); padding: 8px; border-radius: 8px; cursor: pointer;">
+                                    <i class="ph-bold ph-x"></i>
+                                </button>
+                            </div>
+                        `;
+                    } else if (v.status === 'cancelled') {
+                        stHtml = `<span style="color: var(--text-muted); font-size: 0.75rem;">Cancelado</span>`;
+                    } else {
+                        stHtml = `<span style="color: #10b981; font-size: 0.75rem; font-weight: 700;">PAGO</span>`;
+                    }
+
+                    html += `
+                        <tr style="background: rgba(255,255,255,0.02);">
+                            <td style="padding: 1rem; font-size: 0.75rem; color: var(--text-muted);">#${v.id}</td>
+                            <td style="padding: 1rem; font-size: 0.8rem;">${v.data}</td>
+                            <td style="padding: 1rem; font-size: 0.85rem; font-weight: 600;">${v.cliente}</td>
+                            <td style="padding: 1rem; font-weight: 700;">R$ ${v.total.toFixed(2)}</td>
+                            <td style="padding: 1rem;">${stHtml}</td>
+                            <td style="padding: 1rem; text-align: center;">${acHtml}</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('vendas-recentes').innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Sem vendas hoje.</td></tr>';
+
+                // Status Bot
+                const wStatus = await (await fetch('/api/whatsapp/status')).json();
+                const bEl = document.getElementById('val-bot-status');
+                bEl.innerText = wStatus.status === 'CONNECTED' ? 'Online' : 'Offline';
+                bEl.style.color = wStatus.status === 'CONNECTED' ? '#25d366' : '#ef4444';
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        loadStats();
+        setInterval(loadStats, 6000);
+    }
+</script>
+{% endblock %}

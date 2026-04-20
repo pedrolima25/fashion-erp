@@ -1,0 +1,182 @@
+{% extends "master.html" %}
+
+{% block title %}Financeiro | Fashion ERP{% endblock %}
+
+{% block header_title %}Fluxo de Caixa & Financeiro{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="glass glass-card">
+        <div class="widget-title">Faturamento (Mês)</div>
+        <div id="stats-entradas" class="widget-value" style="color: var(--accent);">R$ 0,00</div>
+    </div>
+    <div class="glass glass-card">
+        <div class="widget-title">Custo de Vendas</div>
+        <div id="stats-custo" class="widget-value" style="color: #ff9800;">R$ 0,00</div>
+    </div>
+    <div class="glass glass-card" style="border-bottom: 3px solid var(--accent);">
+        <div class="widget-title">Lucro Bruto</div>
+        <div id="stats-lucro-bruto" class="widget-value" style="color: white;">R$ 0,00</div>
+    </div>
+    <div class="glass glass-card">
+        <div class="widget-title">Outras Despesas</div>
+        <div id="stats-saidas" class="widget-value" style="color: var(--secondary);">R$ 0,00</div>
+    </div>
+    <div class="glass glass-card" style="border-bottom: 3px solid var(--accent); background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), transparent);">
+        <div class="widget-title">Lucro Líquido</div>
+        <div id="stats-saldo" class="widget-value" style="font-weight: 800; color: white;">R$ 0,00</div>
+    </div>
+</div>
+
+<div class="glass" style="padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem;">Movimentações Financeiras</h3>
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-secondary" onclick="openExpenseModal()"><i class="fas fa-minus-circle"></i> Lançar Despesa</button>
+            <button class="btn btn-primary" onclick="alert('Relatório PDF sendo implementado')"><i class="fas fa-file-export"></i> Relatório</button>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Tipo</th>
+                <th>Método</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody id="finance-list">
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    Buscando movimentações...
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="modal-despesa" class="modal">
+    <div class="glass" style="width: 500px; padding: 2rem; position: relative;">
+        <button onclick="closeModal()" class="btn-close">&times;</button>
+        <h3 style="margin-bottom: 2rem;">Lançar Nova Despesa</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div>
+                <label class="label">Descrição</label>
+                <input type="text" id="exp-desc" placeholder="Ex: Aluguel, Luz, Fornecedor..." class="input">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="label">Valor (R$)</label>
+                    <input type="number" id="exp-value" step="0.01" class="input">
+                </div>
+                <div>
+                    <label class="label">Pagamento</label>
+                    <select id="exp-method" class="input">
+                        <option value="PIX">PIX</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão">Cartão</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="saveExpense()" class="btn btn-primary" style="height: 50px; justify-content: center;">Confirmar Lançamento</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function formatBRL(val) {
+        return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function openExpenseModal() {
+        document.getElementById('modal-despesa').classList.add('active');
+    }
+    
+    function closeModal() {
+        document.getElementById('modal-despesa').classList.remove('active');
+    }
+
+    async function loadFinance() {
+        try {
+            // Stats
+            const resStats = await fetch('/api/financial/stats');
+            const stats = await resStats.json();
+            
+            document.getElementById('stats-entradas').innerText = formatBRL(stats.entradas);
+            document.getElementById('stats-saidas').innerText = formatBRL(stats.saidas);
+            document.getElementById('stats-custo').innerText = formatBRL(stats.custo_vendas);
+            document.getElementById('stats-lucro-bruto').innerText = formatBRL(stats.lucro_bruto);
+            document.getElementById('stats-saldo').innerText = formatBRL(stats.lucro_liquido);
+            
+            // Cores dinâmicas para lucros
+            document.getElementById('stats-lucro-bruto').style.color = stats.lucro_bruto >= 0 ? 'var(--accent)' : 'var(--secondary)';
+            document.getElementById('stats-saldo').style.color = stats.lucro_liquido >= 0 ? 'var(--accent)' : 'var(--secondary)';
+
+            // Transactions
+            const resTxs = await fetch('/api/financial/transactions');
+            const txs = await resTxs.json();
+            
+            let html = '';
+            if (txs.length === 0) {
+                html = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">Nenhuma movimentação este mês.</td></tr>';
+            } else {
+                txs.forEach(t => {
+                    const color = t.tipo === 'income' ? 'var(--accent)' : 'var(--secondary)';
+                    const sign = t.tipo === 'income' ? '+' : '-';
+                    html += `
+                        <tr>
+                            <td>${t.data}</td>
+                            <td>${t.descricao}</td>
+                            <td><span class="badge" style="background: ${color}33; color: ${color}">${t.tipo === 'income' ? 'Entrada' : 'Saída'}</span></td>
+                            <td>${t.metodo}</td>
+                            <td style="font-weight: 600; color: ${color}">${sign} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    `;
+                });
+            }
+            document.getElementById('finance-list').innerHTML = html;
+        } catch (e) {
+            console.error('Erro ao carregar financeiro:', e);
+        }
+    }
+
+    async function saveExpense() {
+        const desc = document.getElementById('exp-desc').value;
+        const value = parseFloat(document.getElementById('exp-value').value);
+        const method = document.getElementById('exp-method').value;
+
+        if (!desc || isNaN(value)) {
+            alert('Preencha os campos obrigatórios.');
+            return;
+        }
+
+        const res = await fetch('/api/financial/transactions', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                type: 'expense',
+                amount: value,
+                description: desc,
+                payment_method: method
+            })
+        });
+
+        if (res.ok) {
+            closeModal();
+            loadFinance();
+            // Som de sucesso (opcional)
+        }
+    }
+
+    loadFinance();
+</script>
+
+<style>
+    .label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .input { width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+</style>
+{% endblock %}
