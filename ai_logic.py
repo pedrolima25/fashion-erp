@@ -132,7 +132,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     elif state['step'] == 1:
         # Tenta interpretar com IA se não for um número direto
         if not text.isdigit():
-            search_res = smart_search(text, db, company_id)
+            search_res = smart_search(client_phone, text, db, company_id)
             if search_res: return search_res
             
         # Escolha da Categoria (Número)
@@ -419,7 +419,7 @@ def process_message(client_phone: str, message: str, db=None, company_id: int = 
             del rule_states[state_key]
     return process_with_rules(client_phone, message, db, company_id)
 
-def smart_search(query: str, db, company_id: int):
+def smart_search(client_phone: str, query: str, db, company_id: int):
     """Usa Gemini para entender o que o cliente quer e sugerir produtos."""
     if not ai_client: return None
     
@@ -438,8 +438,8 @@ def smart_search(query: str, db, company_id: int):
         
         target_cat = db.query(Category).filter(Category.company_id == company_id, Category.name.ilike(f"%{cat_name}%")).first()
         if target_cat:
-            # Simula a escolha da categoria
-            return process_with_rules("system", str(target_cat.id), db, company_id) # Nota: isso precisa ser adaptado se o process_with_rules esperar numeros de menu
+            # Simula a escolha da categoria com o telefone real do cliente para manter o estado
+            return process_with_rules(client_phone, str(target_cat.id), db, company_id)
             # Para simplificar agora, vamos apenas sugerir a categoria
             # return f"✨ Entendi! Você está procurando por *{target_cat.name}*. Deixe-me mostrar o que temos..."
     except:
