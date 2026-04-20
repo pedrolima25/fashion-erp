@@ -762,6 +762,7 @@ class SettingsUpdate(BaseModel):
     whatsapp_number: Optional[str] = None
     pix_key: Optional[str] = None
     address: Optional[str] = None
+    location_link: Optional[str] = None
     delivery_fee: float = 0.0
     delivery_mode: str = "fixed"
 
@@ -775,6 +776,7 @@ def get_settings(request: Request, db: Session = Depends(get_db)):
         "whatsapp_number": comp.whatsapp_number,
         "pix_key": comp.pix_key,
         "address": comp.address,
+        "location_link": comp.location_link,
         "delivery_fee": comp.delivery_fee,
         "delivery_mode": comp.delivery_mode or "fixed"
     }
@@ -789,6 +791,7 @@ def save_settings(data: SettingsUpdate, request: Request, db: Session = Depends(
     comp.whatsapp_number = data.whatsapp_number
     comp.pix_key = data.pix_key
     comp.address = data.address
+    comp.location_link = data.location_link
     comp.delivery_fee = data.delivery_fee
     comp.delivery_mode = data.delivery_mode
     

@@ -46,7 +46,8 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                 "1️⃣ *Ver Coleções (Categorias)*\n"
                 "2️⃣ *Falar com um Atendente*\n"
                 "3️⃣ *Meus Pedidos*\n"
-                "4️⃣ *Ver Catálogo Completo (Tudo)*")
+                "4️⃣ *Ver Catálogo Completo (Tudo)*\n"
+                "5️⃣ *Localização e Endereço*")
         
         if company and company.logo_base64:
             return {"text": menu, "image_base64": company.logo_base64}
@@ -118,6 +119,18 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             for i, p in enumerate(products, 1):
                 menu_all += f"{i}️⃣ *{p.name}* - R$ {p.base_price:.2f}\n"
             return menu_all
+
+        elif text == "5":
+            # Localização e Endereço
+            address = company.address if company.address else "Ainda não cadastramos nosso endereço físico."
+            location = company.location_link if company.location_link else ""
+            
+            msg = f"📍 *NOSSA LOCALIZAÇÃO*\n\n🏠 *Endereço:* {address}\n"
+            if location:
+                msg += f"\n🗺️ *Link do GPS (Google Maps):*\n{location}\n"
+            
+            msg += "\nEsperamos sua visita! ✨\n\nDigite *Menu* para voltar as opções."
+            return msg
 
     elif state['step'] == 1:
         # Escolha da Categoria (Número)

@@ -29,9 +29,15 @@
                 </div>
             </div>
 
-            <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço e Localização</label>
-                <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço Completo</label>
+                    <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Link do Google Maps (GPS)</label>
+                    <input type="text" id="conf-location-link" placeholder="https://maps.app.goo.gl/..." style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                </div>
             </div>
 
         </div>
@@ -130,6 +136,7 @@
             document.getElementById('conf-phone').value = data.whatsapp_number || '';
             document.getElementById('conf-pix').value = data.pix_key || '';
             document.getElementById('conf-address').value = data.address || '';
+            document.getElementById('conf-location-link').value = data.location_link || '';
             document.getElementById('conf-delivery-fee').value = data.delivery_fee || 0;
             const mode = data.delivery_mode || 'fixed';
             document.getElementById('conf-delivery-mode').value = mode;
@@ -190,6 +197,7 @@
         const whatsapp_number = document.getElementById('conf-phone').value;
         const pix_key = document.getElementById('conf-pix').value;
         const address = document.getElementById('conf-address').value;
+        const location_link = document.getElementById('conf-location-link').value;
         const delivery_fee = parseFloat(document.getElementById('conf-delivery-fee').value) || 0;
         const delivery_mode = document.getElementById('conf-delivery-mode').value;
 
@@ -197,7 +205,7 @@
             const res = await fetch('/api/config/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, whatsapp_number, pix_key, address, delivery_fee, delivery_mode })
+                body: JSON.stringify({ name, whatsapp_number, pix_key, address, location_link, delivery_fee, delivery_mode })
             });
 
             if (res.ok) {
