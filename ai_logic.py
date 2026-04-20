@@ -254,7 +254,14 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             state['delivery_type'] = 'pickup'
             state['delivery_fee'] = 0.0
             state['address'] = "Retirada na Loja"
-            return finalize_whatsapp_sale(client_phone, state, db, company_id, state_key)
+            state['step'] = 7 # Vai para escolha de pagamento
+            rule_states[state_key] = state
+            return (f"📍 *Retirada na Loja selecionada!* O endereço para buscar é:\n"
+                    f"{company.address if company.address else 'Endereço a ser confirmado'}\n\n"
+                    "Agora, como você prefere pagar?\n\n"
+                    "1️⃣ **PIX (Copia e Cola)**\n"
+                    "2️⃣ **Pagar na Retirada**\n\n"
+                    "Digite o número da opção desejada.")
         elif text == "2":
             state['delivery_type'] = 'delivery'
             company = db.query(Company).filter(Company.id == company_id).first()
@@ -317,9 +324,9 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
         state['step'] = 7
         rule_states[state_key] = state
         
-        return (f"📍 *Endereço salvo!* Agora, como você prefere pagar?\n\n"
+        return (f"📍 *Endereço de entrega salvo!* Agora, como você prefere pagar?\n\n"
                 f"1️⃣ **PIX (Copia e Cola)**\n"
-                f"2️⃣ **Pagar na Entrega / Retirada**\n\n"
+                f"2️⃣ **Pagar na Entrega**\n\n"
                 "Digite o número da opção desejada.")
 
     elif state['step'] == 7:
