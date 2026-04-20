@@ -406,10 +406,18 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                         f"💳 *Valor:* R$ {total:.2f}\n\n"
                         "💡 *Dica:* Copie o código acima e pague no seu banco.")
         
+        # Localização da Loja (Para Retirada ou Referência)
+        store_location_info = ""
+        if company.address:
+            store_location_info = f"\n\n📍 *Endereço da Loja:*\n{company.address}"
+            if company.location_link:
+                store_location_info += f"\n🗺️ *GPS:* {company.location_link}"
+
         # Limpa Estado
         rule_states[state_key] = {'active': False, 'step': 0}
         
-        resumo_logistica = "📍 *Retirada na Loja*" if state['delivery_type'] == 'pickup' else f"🚚 *Entrega em:* {state['address']}"
+        is_pickup = state.get('delivery_type') == 'pickup'
+        resumo_logistica = "✅ *Retirada na Loja agendada!*" if is_pickup else f"🚚 *Entrega em:* {state['address']}"
         
         # Emoji dinâmico para o resumo final
         final_emoji = get_category_emoji(product.name) if not "vestido" in product.name.lower() else "👗"
@@ -420,8 +428,9 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                 f"📦 *Frete:* R$ {delivery_fee:.2f}\n"
                 f"⭐ *TOTAL:* R$ {total:.2f}\n\n"
                 f"{resumo_logistica}\n"
-                f"💳 *Pagamento:* {payment_method}\n\n"
-                "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos o envio aqui! Obrigado! 🛍️"
+                f"💳 *Pagamento:* {payment_method}"
+                f"{store_location_info}\n\n"
+                "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos tudo aqui! Obrigado! 🛍️"
                 f"{pix_info}")
         
         # Se for um dicionário (para lidar com o SPLIT), retornamos como tal
