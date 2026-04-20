@@ -990,6 +990,13 @@ def whatsapp_start(request: Request, force: bool = False):
     whatsapp_manager.start_session(company_id, force_new=force)
     return {"success": True}
 
+@app.post("/api/whatsapp/clean")
+def whatsapp_clean(request: Request):
+    company_id = request.session.get("company_id")
+    if not company_id: return {"error": "Unauthorized"}
+    whatsapp_manager.clean_session(company_id)
+    return {"success": True}
+
 @app.get("/api/whatsapp/groups")
 async def get_whatsapp_groups(request: Request, refresh: bool = False):
     cid = request.session.get("company_id")
