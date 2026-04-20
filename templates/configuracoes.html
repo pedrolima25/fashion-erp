@@ -6,56 +6,61 @@
 
 {% block content %}
 <div class="dashboard-grid" style="grid-template-columns: 1.5fr 1fr;">
-    <!-- Dados da Loja -->
-    <div class="glass" style="padding: 2rem;">
-        <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
-            <i class="fas fa-store" style="color: var(--primary);"></i> Perfil da Loja
-        </h3>
-        
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Unidade</label>
-                <input type="text" id="conf-name" value="Fashion Store Premium" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-            </div>
+    <!-- Coluna 1: Dados e Logística -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Dados da Loja -->
+        <div class="glass" style="padding: 2rem;">
+            <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-store" style="color: var(--primary);"></i> Perfil da Loja
+            </h3>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                 <div>
-                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Celular / WhatsApp</label>
-                    <input type="text" id="conf-phone" placeholder="(00) 00000-0000" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Unidade</label>
+                    <input type="text" id="conf-name" value="Fashion Store Premium" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
                 </div>
-                <div>
-                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Chave PIX (CNPJ/E-mail/Tel)</label>
-                    <input type="text" id="conf-pix" placeholder="Sua chave PIX" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Celular / WhatsApp</label>
+                        <input type="text" id="conf-phone" placeholder="(00) 00000-0000" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Chave PIX (CNPJ/E-mail/Tel)</label>
+                        <input type="text" id="conf-pix" placeholder="Sua chave PIX" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    </div>
                 </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço Completo</label>
-                    <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço Completo</label>
+                        <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Link do Google Maps (GPS)</label>
+                        <input type="text" id="conf-location-link" placeholder="https://maps.app.goo.gl/..." style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    </div>
                 </div>
-                <div>
-                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Link do Google Maps (GPS)</label>
-                    <input type="text" id="conf-location-link" placeholder="https://maps.app.goo.gl/..." style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-                </div>
-            </div>
 
+                <button onclick="saveSettings()" class="btn btn-primary" style="margin-top: 1rem; width: 100%; justify-content: center; height: 50px; font-weight: 700;">
+                    <i class="fas fa-save"></i> SALVAR CONFIGURAÇÕES DA LOJA
+                </button>
+            </div>
         </div>
-    </div>
 
-    <!-- Logística -->
-    <div class="glass" style="padding: 2rem; margin-top: 1.5rem;">
-        <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
-            <i class="fas fa-truck" style="color: var(--secondary);"></i> Logística e Entrega
-        </h3>
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Tipo de Cobrança de Entrega</label>
-                <select id="conf-delivery-mode" onchange="toggleLogisticsView(this.value)" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-                    <option value="fixed">Taxa Única (Fixa)</option>
-                    <option value="neighborhood">Por Bairro (Variável)</option>
-                </select>
-            </div>
+        <!-- Logística -->
+        <div class="glass" style="padding: 2rem;">
+            <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-truck" style="color: var(--secondary);"></i> Logística e Entrega
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Tipo de Cobrança de Entrega</label>
+                    <select id="conf-delivery-mode" onchange="toggleLogisticsView(this.value)" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <option value="fixed">Taxa Única (Fixa)</option>
+                        <option value="neighborhood">Por Bairro (Variável)</option>
+                    </select>
+                </div>
 
             <div id="view-fixed-fee">
                 <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Taxa de Entrega Padrão (R$)</label>
@@ -92,6 +97,9 @@
             <p style="font-size: 0.8rem; color: var(--text-muted);">
                 Esta taxa será somada automaticamente quando o cliente escolher a opção de **Entrega** no WhatsApp Bot.
             </p>
+            <button onclick="saveSettings()" class="btn btn-secondary" style="margin-top: 1rem; width: 100%; justify-content: center; font-weight: 600;">
+                <i class="fas fa-save"></i> SALVAR ALTERAÇÕES DE LOGÍSTICA
+            </button>
         </div>
     </div>
 
