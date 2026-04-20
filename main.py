@@ -161,11 +161,16 @@ async def marketing_worker_task():
 async def lifespan(app: FastAPI):
     logger.info("🚀 Iniciando Fashion ERP Pro...")
     try:
+        # Tenta sincronizar o banco. Em ambientes com múltiplos workers (como Railway/Gunicorn),
+        # um worker terá sucesso e os outros podem falhar silenciosamente se o trabalho já estiver feito.
+        Base.metadata.create_all(bind=engine)
         run_migrations()
         with SessionLocal() as session:
             from database import populate_initial_data
             populate_initial_data(session)
-        logger.info("✅ Banco de dados pronto!")
+        logger.info("✅ Banco de dados sincronizado e pronto!")
+    except Exception as db_err:
+        logger.warning(f"⚠️ Aviso na sincronização do banco (pode ser concorrência): {db_err}")
 
         # Inicia tarefas em background
         asyncio.create_task(self_ping_task())

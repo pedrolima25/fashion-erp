@@ -244,6 +244,12 @@ def populate_initial_data(db):
         db.commit()
         db.refresh(demo_co)
         
+        # Cria usuário admin para a loja demo
+        admin_user = User(
+            username="admin", 
+            hashed_password=pwd_context.hash("123456"),
+            company_id=demo_co.id
+        )
         db.add(admin_user)
         db.commit()
         
