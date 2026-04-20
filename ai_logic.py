@@ -131,16 +131,37 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             if not products:
                 return "Desculpe, não encontramos peças disponíveis nesta coleção agora. Quer ver outra? Digite *Menu*."
             
-            emoji = get_category_emoji(category.name)
-            menu_prod = f"{emoji} *COLEÇÃO: {category.name.upper()}*\n\nEscolha o modelo que você deseja ver em detalhes:\n\n"
+            state['step'] = 2
             state['prod_map'] = {}
+            msg_list = []
             
             for i, p in enumerate(products, 1):
-                menu_prod += f"{i}️⃣ *{p.name}* - R$ {p.base_price:.2f}\n"
                 state['prod_map'][str(i)] = p.id
+                if p.image_base64:
+                    msg_list.append({
+                        "image": p.image_base64,
+                        "text": f"{i}️⃣ *{p.name}*\n💰 Valor: R$ {p.base_price:.2f}"
+                    })
             
-            menu_prod += "\nDigite o número do modelo para ver fotos e tamanhos."
+            emoji = get_category_emoji(category.name)
+            summary_text = (f"{emoji} *COLEÇÃO: {category.name.upper()}*\n\n"
+                            f"Encontramos {len(products)} modelos nesta coleção! "
+                            f"Estou enviando as fotos logo abaixo... 👇\n\n"
+                            f"Para ver os tamanhos e detalhes, basta digitar o *Número* que aparece em cima da foto.")
+            
             rule_states[state_key] = state
+            
+            if msg_list:
+                return {
+                    "text": summary_text,
+                    "image_list": msg_list
+                }
+            
+            # Fallback se não tiver fotos (improvável em moda, mas seguro)
+            menu_prod = f"{emoji} *COLEÇÃO: {category.name.upper()}*\n\nEscolha o modelo:\n\n"
+            for i, p in enumerate(products, 1):
+                menu_prod += f"{i}️⃣ *{p.name}* - R$ {p.base_price:.2f}\n"
+            menu_prod += "\nDigite o número para ver mais detalhes."
             return menu_prod
         return "❌ *Opção inválida.* Por favor, escolha um dos números da lista ou descreva o que procura."
 
