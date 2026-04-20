@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+ENV/
+.git/
+.gitignore
+fashion.db
+*.db-journal
+*.sqlite
+tokens/
+sessions/
+logs/
+*.log
+Procfile
