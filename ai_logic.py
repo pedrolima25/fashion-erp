@@ -1,15 +1,5 @@
-import os
-from google import genai
-from dotenv import load_dotenv
-import re
-import datetime
-from datetime import datetime as dt
 from database import Company, Product, ProductVariation, Category, Customer, Sale, SaleItem, get_manaus_time
-
-load_dotenv()
-
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-ai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+import json
 
 rule_states = {}
 
@@ -130,11 +120,6 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             return menu_all
 
     elif state['step'] == 1:
-        # Tenta interpretar com IA se não for um número direto
-        if not text.isdigit():
-            search_res = smart_search(client_phone, text, db, company_id)
-            if search_res: return search_res
-            
         # Escolha da Categoria (Número)
         cat_id = state.get('cat_map', {}).get(text)
         if cat_id:
@@ -412,36 +397,4 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
 
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
-def process_message(client_phone: str, message: str, db=None, company_id: int = None) -> str:
-    state_key = get_state_key(company_id, client_phone)
-    if message.strip().lower() in ["oi", "olá", "ola", "sair", "cancelar", "menu"]:
-        if state_key in rule_states: 
-            del rule_states[state_key]
     return process_with_rules(client_phone, message, db, company_id)
-
-def smart_search(client_phone: str, query: str, db, company_id: int):
-    """Usa Gemini para entender o que o cliente quer e sugerir produtos."""
-    if not ai_client: return None
-    
-    # Busca categorias e produtos para dar contexto
-    categories = db.query(Category).filter(Category.company_id == company_id).all()
-    cat_names = [c.name for c in categories]
-    
-    prompt = (f"O cliente de uma loja de roupas disse: '{query}'\n"
-              f"As categorias disponíveis são: {', '.join(cat_names)}.\n"
-              "Se o cliente estiver procurando algo que se encaixe em uma dessas categorias, responda APENAS o nome da categoria.\n"
-              "Se não tiver certeza, responda 'NONE'.")
-    
-    try:
-        response = ai_client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
-        cat_name = response.text.strip().replace("*", "")
-        
-        target_cat = db.query(Category).filter(Category.company_id == company_id, Category.name.ilike(f"%{cat_name}%")).first()
-        if target_cat:
-            # Simula a escolha da categoria com o telefone real do cliente para manter o estado
-            return process_with_rules(client_phone, str(target_cat.id), db, company_id)
-            # Para simplificar agora, vamos apenas sugerir a categoria
-            # return f"✨ Entendi! Você está procurando por *{target_cat.name}*. Deixe-me mostrar o que temos..."
-    except:
-        pass
-    return None
