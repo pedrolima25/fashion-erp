@@ -23,9 +23,6 @@ def get_category_emoji(name: str):
 
 def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     """Regras de negócio para o Bot da Loja de Roupas."""
-    company = db.query(Company).filter(Company.id == company_id).first()
-    company_name = company.name if company else "Loja de Roupas"
-    
     state_key = get_state_key(company_id, client_phone)
     is_new = state_key not in rule_states
     state = rule_states.get(state_key, {'active': True, 'step': 0, 'product_id': None})
@@ -239,7 +236,6 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
         state['client_name'] = client_name
         state['step'] = 5
         
-        company = db.query(Company).filter(Company.id == company_id).first()
         fee = company.delivery_fee if company else 0.0
         
         rule_states[state_key] = state
@@ -264,7 +260,6 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                     "Digite o número da opção desejada.")
         elif text == "2":
             state['delivery_type'] = 'delivery'
-            company = db.query(Company).filter(Company.id == company_id).first()
             
             mode = company.delivery_mode or 'fixed'
             if mode == 'fixed':
