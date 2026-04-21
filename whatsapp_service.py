@@ -305,6 +305,13 @@ class WhatsAppService:
             wa_id = f"{digits}@c.us"
         
         try:
+            # Priming: Força o WhatsApp Web a localizar o contato antes de enviar
+            # Isso resolve muitos erros de "No LID for user"
+            try:
+                client.setPresence("composing", wa_id)
+                time.sleep(0.3)
+            except: pass
+
             client.sendText(wa_id, text)
             logger.info(f"📤 [WA {company_id}] Msg enviada para {wa_id}")
             return True
@@ -368,6 +375,12 @@ class WhatsAppService:
             wa_id = f"{digits}@c.us"
         
         try:
+            # Priming para imagens também
+            try:
+                client.setPresence("composing", wa_id)
+                time.sleep(0.3)
+            except: pass
+
             clean_b64 = base64_data.split(",")[1] if "," in base64_data else base64_data
             temp_dir = os.path.join(os.getcwd(), "tokens", "temp_images")
             os.makedirs(temp_dir, exist_ok=True)
