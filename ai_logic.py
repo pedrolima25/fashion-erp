@@ -53,7 +53,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
         if 12 <= now_h < 18: greet = "Boa tarde"
         elif now_h >= 18 or now_h < 5: greet = "Boa noite"
         
-        menu = (f"{greet}! 👗✨ Bem-vinda(o) à *{company_name}*.\n\n"
+        menu = (f"{greet}! 👗✨ Bem-vinda(o) à *{comp_name}*.\n\n"
                 f"É um prazer ter você aqui! Como podemos te ajudar hoje?\n\n"
                 "1️⃣ *Ver Coleções (Categorias)*\n"
                 "2️⃣ *Falar com um Atendente*\n"
