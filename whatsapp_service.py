@@ -294,7 +294,12 @@ class WhatsAppService:
     def send_message(self, company_id, to_number, text):
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
-        wa_id = f"{''.join(filter(str.isdigit, to_number))}@c.us" if "@" not in to_number else to_number
+        
+        # Limpeza agressiva para evitar erro "No LID for user"
+        # Mantém apenas os dígitos do número
+        digits = "".join(filter(str.isdigit, str(to_number).split("@")[0]))
+        wa_id = f"{digits}@c.us"
+        
         try:
             client.sendText(wa_id, text)
             logger.info(f"📤 [WA {company_id}] Msg enviada para {wa_id}")
@@ -349,7 +354,11 @@ class WhatsAppService:
     def send_image(self, company_id, to_number, base64_data, caption=""):
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
-        wa_id = f"{''.join(filter(str.isdigit, to_number))}@c.us" if "@" not in to_number else to_number
+        
+        # Limpeza agressiva para evitar erro "No LID for user"
+        digits = "".join(filter(str.isdigit, str(to_number).split("@")[0]))
+        wa_id = f"{digits}@c.us"
+        
         try:
             clean_b64 = base64_data.split(",")[1] if "," in base64_data else base64_data
             temp_dir = os.path.join(os.getcwd(), "tokens", "temp_images")
