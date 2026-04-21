@@ -332,9 +332,8 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     
     vendas_list = []
     for r in recentes:
-        # Nas versões recentes com SQLite, r.date já é salvo com o horário de Manaus.
-        # Não usamos .astimezone() para evitar que o servidor desloque -1h (assumindo Brasília).
-        horario = r.date.strftime("%H:%M")
+        # Garantimos que a data do banco (que pode vir em UTC) seja convertida para Manaus
+        horario = r.date.astimezone(manaus_tz).strftime("%H:%M")
             
         vendas_list.append({
             "id": r.id,
@@ -693,7 +692,7 @@ def get_transactions(request: Request, db: Session = Depends(get_db)):
     for t in txs:
         res.append({
             "id": t.id,
-            "data": t.date.strftime("%d/%m/%Y %H:%M"),
+            "data": t.date.astimezone(manaus_tz).strftime("%d/%m/%Y %H:%M"),
             "descricao": t.description,
             "tipo": t.type, # income / expense
             "metodo": t.payment_method,
