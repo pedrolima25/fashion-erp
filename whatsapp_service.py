@@ -305,6 +305,7 @@ class WhatsAppService:
             digits = "".join(filter(str.isdigit, to_number_str))
             wa_id = f"{digits}@c.us"
         
+        logger.info(f"📤 [WA {company_id}] Tentando enviar para JID: {wa_id} (to_number bruto: {to_number})")
         try:
             # Priming: Força o WhatsApp Web a localizar o contato antes de enviar
             # Isso resolve muitos erros de "No LID for user"

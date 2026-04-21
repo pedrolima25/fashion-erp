@@ -433,13 +433,10 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         is_pickup = state.get('delivery_type') == 'pickup'
         resumo_logistica = "Retirada" if is_pickup else "Entrega"
         
-        # VERSÃO ULTRA SIMPLIFICADA PARA TESTE DE LID
-        resp = (f"Pedido Recebido, {client_name}!\n\n"
-                f"Item: {product.name} ({variation.size})\n"
-                f"Total: R$ {total:.2f}\n"
-                f"Logistica: {resumo_logistica}\n\n"
-                f"PIX COPIA E COLA:\n{pix_res.get('qr_code', 'Chamar atendente')}\n\n"
-                "Aguardamos seu pagamento!")
+        # VERSÃO MÍNIMA POSSÍVEL (Pedido do Usuário)
+        resp = (f"✅ Pedido: {product.name} ({variation.size})\n"
+                f"💰 Total: R$ {total:.2f} ({resumo_logistica})\n\n"
+                f"PIX: {pix_res.get('qr_code', 'Erro ao gerar Pix')}")
         
         if state_key in rule_states:
             del rule_states[state_key]
