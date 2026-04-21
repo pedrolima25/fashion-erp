@@ -55,28 +55,37 @@ class WhatsAppService:
         threading.Thread(target=watchdog, daemon=True, name="WA_Watchdog").start()
         
     def notify_merchant_new_sale(self, company_id, sale_id, details):
-        """Notifica o dono da loja sobre uma nova venda pendente."""
-        client = self.clients.get(company_id)
-        if not client or self.status.get(company_id) != "CONNECTED":
-            return
-            
-        try:
+        def _notify():
             merchant_number = details.get("merchant_number")
             if not merchant_number: return
             
-            msg = (f"💰 *NOVO PEDIDO RECEBIDO!* 💰\n\n"
-                   f"🆔 *Pedido:* #{sale_id}\n"
+            msg = (f"🛍️ *NOVO PEDIDO RECEBIDO!* (# {sale_id})\n\n"
                    f"👤 *Cliente:* {details.get('customer_name')}\n"
-                   f"🛍️ *Item:* {details.get('product_name')}\n"
-                   f"💵 *Total:* R$ {details.get('total'):.2f}\n"
+                   f"👗 *Produto:* {details.get('product_name')}\n"
+                   f"💰 *Total:* R$ {details.get('total'):.2f}\n"
                    f"💳 *Pagamento:* {details.get('payment_method')}\n"
-                   f"🚚 *Tipo:* {details.get('delivery_type')}\n\n"
-                   f"⚠️ *Status:* PENDENTE\n"
-                   f"Acesse seu painel para confirmar o pagamento!")
+                   f"📍 *Entrega:* {'Retirada' if details.get('delivery_type') == 'pickup' else 'Delivery'}\n\n"
+                   "Acesse o painel para processar o pedido.")
             
             self.send_message(company_id, merchant_number, msg)
-        except Exception as e:
-            logger.error(f"❌ [WA {company_id}] Falha ao notificar mercador: {e}")
+        
+        # Envia em background para não travar o cliente
+        threading.Thread(target=_notify).start()
+
+    def notify_merchant_out_of_stock(self, company_id, product_name, variation_size):
+        def _notify():
+            # Busca a empresa para pegar o número do lojista
+            from database import SessionLocal, Company
+            with SessionLocal() as db:
+                company = db.query(Company).filter(Company.id == company_id).first()
+                if not company or not company.whatsapp_number: return
+                
+                msg = (f"⚠️ *ALERTA DE ESTOQUE ZERO*\n\n"
+                       f"O produto *{product_name}* (Tamanho {variation_size}) acabou de esgotar via WhatsApp.")
+                
+                self.send_message(company_id, company.whatsapp_number, msg)
+        
+        threading.Thread(target=_notify).start()
 
     def get_status(self, company_id):
         return {
@@ -171,11 +180,19 @@ class WhatsAppService:
 
                 logger.info(f"📥 Recebido WA [Empresa {company_id}] de {full_jid}: {texto}")
 
+                # 1. PROCESSAMENTO DE REGRAS (DB)
+                t_init = time.perf_counter()
+                resultado = None
                 from database import SessionLocal
                 from ai_logic import process_message
-                db = SessionLocal()
-                try:
+                with SessionLocal() as db:
                     resultado = process_message(client_phone=celular, message=texto, db=db, company_id=company_id)
+                
+                t_logic = time.perf_counter() - t_init
+                logger.info(f"⏱️ [Timer] Lógica de IA: {t_logic:.2f}s")
+                
+                # 2. ENVIOS DE RESPOSTA (Não mantém DB aberto)
+                if resultado:
                     if isinstance(resultado, dict):
                         text_to_send = resultado.get("text", "")
                         img_base64 = resultado.get("image_base64")
@@ -188,25 +205,24 @@ class WhatsAppService:
                                 cap = item.get("text", "")
                                 if img:
                                     self.send_image(company_id, full_jid, img, cap)
-                                    time.sleep(1.5)
+                                    time.sleep(0.5) # Reduzido para fluidez
                         elif text_to_send and "|SPLIT|" in text_to_send:
                             parts = [p.strip() for p in text_to_send.split("|SPLIT|") if p.strip()]
                             for i, part in enumerate(parts):
-                                try:
-                                    if i == 0 and img_base64: self.send_image(company_id, full_jid, img_base64, part)
-                                    else: self.send_message(company_id, full_jid, part)
-                                    time.sleep(0.8)
-                                except Exception as e:
-                                    logger.error(f"❌ [WA {company_id}] Erro ao enviar part {i}: {e}")
+                                if i == 0 and img_base64: 
+                                    self.send_image(company_id, full_jid, img_base64, part)
+                                else: 
+                                    self.send_message(company_id, full_jid, part)
+                                if i < len(parts) - 1: time.sleep(0.4)
                         else:
                             if img_base64: self.send_image(company_id, full_jid, img_base64, text_to_send)
                             elif text_to_send: self.send_message(company_id, full_jid, text_to_send)
+                    
                     elif isinstance(resultado, str) and resultado:
                         self.send_message(company_id, full_jid, resultado)
-                except Exception as e:
-                    logger.error(f"Erro IA WA {company_id}: {e}")
-                finally:
-                    db.close()
+                
+                t_total = time.perf_counter() - t_init
+                logger.info(f"⏱️ [Timer] Ciclo Total: {t_total:.2f}s")
             except Exception as e:
                 logger.error(f"Erro handle_message WA {company_id}: {e}")
 
@@ -329,7 +345,7 @@ class WhatsAppService:
                         # Chama evaluate e ignora o retorno para evitar o warning de corrotina não aguardada
                         # No framework PlaywrightSafeThread, isso agenda a tarefa no loop correto
                         client.page.evaluate(sync_script)
-                        time.sleep(1.2)
+                        time.sleep(0.8)
                     except: pass
                     continue
                 
