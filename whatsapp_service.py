@@ -295,10 +295,14 @@ class WhatsAppService:
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
         
-        # Limpeza agressiva para evitar erro "No LID for user"
-        # Mantém apenas os dígitos do número
-        digits = "".join(filter(str.isdigit, str(to_number).split("@")[0]))
-        wa_id = f"{digits}@c.us"
+        # Preserva o JID original se já tiver @ (essencial para usuários @lid)
+        # Caso contrário, higieniza apenas números puros
+        to_number_str = str(to_number)
+        if "@" in to_number_str:
+            wa_id = to_number_str
+        else:
+            digits = "".join(filter(str.isdigit, to_number_str))
+            wa_id = f"{digits}@c.us"
         
         try:
             client.sendText(wa_id, text)
@@ -355,9 +359,13 @@ class WhatsAppService:
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
         
-        # Limpeza agressiva para evitar erro "No LID for user"
-        digits = "".join(filter(str.isdigit, str(to_number).split("@")[0]))
-        wa_id = f"{digits}@c.us"
+        # Preserva o JID original se já tiver @
+        to_number_str = str(to_number)
+        if "@" in to_number_str:
+            wa_id = to_number_str
+        else:
+            digits = "".join(filter(str.isdigit, to_number_str))
+            wa_id = f"{digits}@c.us"
         
         try:
             clean_b64 = base64_data.split(",")[1] if "," in base64_data else base64_data
