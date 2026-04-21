@@ -431,31 +431,26 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
                 store_info += f"\n🗺️ *GPS:* {company.location_link}"
 
         is_pickup = state.get('delivery_type') == 'pickup'
-        resumo_logistica = "✅ *Retirada na Loja agendada!*" if is_pickup else f"🚚 *Entrega em:* {state.get('address')}"
+        resumo_logistica = "Retirada" if is_pickup else "Entrega"
         
-        final_emoji = "👗" if "vestido" in product.name.lower() else "🛍️"
-        
-        resp = (f"🥳 *Pedido Recebido, {client_name}!*\n\n"
-                f"{final_emoji} *Item:* {product.name} ({variation.size})\n"
-                f"💰 *Subtotal:* R$ {item_price:.2f}\n"
-                f"📦 *Frete:* R$ {delivery_fee:.2f}\n"
-                f"⭐ *TOTAL:* R$ {total:.2f}\n\n"
-                f"{resumo_logistica}\n"
-                f"💳 *Pagamento:* {payment_method}"
-                f"{store_info}\n\n"
-                "⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. Assim que virmos seu pagamento, confirmaremos tudo aqui! Obrigado! 🛍️"
-                f"{pix_info}")
+        # VERSÃO ULTRA SIMPLIFICADA PARA TESTE DE LID
+        resp = (f"Pedido Recebido, {client_name}!\n\n"
+                f"Item: {product.name} ({variation.size})\n"
+                f"Total: R$ {total:.2f}\n"
+                f"Logistica: {resumo_logistica}\n\n"
+                f"PIX COPIA E COLA:\n{pix_res.get('qr_code', 'Chamar atendente')}\n\n"
+                "Aguardamos seu pagamento!")
         
         if state_key in rule_states:
             del rule_states[state_key]
 
-        logger.info(f"🚀 [Finalize] Respondendo com sucesso.")
+        logger.info(f"🚀 [Finalize] Respondendo com versão ULTRA SIMPLIFICADA.")
         return resp
         
     except Exception as e:
         logger.error(f"❌ [CRITICAL FINAL] {e}")
         db.rollback()
-        return "❌ *Erro ao processar pedido.* Por favor, peça ajuda a um atendente digitando *Menu*."
+        return "Erro processando pedido. Digite Menu."
 
     return "Não entendi sua opção. Digite *Menu* para ver as opções."
 
