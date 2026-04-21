@@ -34,7 +34,25 @@ class WhatsAppService:
         self.processed_messages = {}       # company_id -> {msg_id -> timestamp}
         self.group_cache = {}              # company_id -> list of groups
         self.group_cache_time = {}         # company_id -> timestamp of last fetch
-        logger.info("✅ WhatsAppService Pronto (Versão Estabilidade Restaurada).")
+        self._start_watchdog()
+        logger.info("✅ WhatsAppService Pronto (Versão Estabilidade Blindada).")
+        
+    def _start_watchdog(self):
+        """Inicia um monitor de saúde das conexões em um thread separado."""
+        def watchdog():
+            while True:
+                time.sleep(60) # Verifica a cada minuto
+                try:
+                    for cid in list(self.status.keys()):
+                        current_status = self.status.get(cid)
+                        # Se estiver desconectado mas não estamos em processo de início, tenta reconectar
+                        if current_status in ["DISCONNECTED", "ERROR", "serverClose", "browserClose"] and cid not in self.starting_sessions:
+                            logger.info(f"🐕 [Watchdog] Detectada queda na empresa {cid}. Tentando reconectar...")
+                            self.start_session(cid)
+                except Exception as e:
+                    logger.error(f"❌ [Watchdog] Erro no loop: {e}")
+
+        threading.Thread(target=watchdog, daemon=True, name="WA_Watchdog").start()
         
     def notify_merchant_new_sale(self, company_id, sale_id, details):
         """Notifica o dono da loja sobre uma nova venda pendente."""
@@ -200,7 +218,18 @@ class WhatsAppService:
                     try: asyncio.get_event_loop()
                     except: asyncio.set_event_loop(asyncio.new_event_loop())
                 
-                b_args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--single-process"]
+                b_args = [
+                    "--no-sandbox", 
+                    "--disable-setuid-sandbox", 
+                    "--disable-dev-shm-usage", 
+                    "--disable-gpu", 
+                    "--single-process",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-site-isolation-trials",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-extensions"
+                ]
                 
                 launch_kwargs = {
                     "session": f"session_empresa_{company_id}",
@@ -233,11 +262,13 @@ class WhatsAppService:
                             self.clients[company_id] = client
                             self.status[company_id] = "CONNECTED"
                             client.onMessage(handle_message)
-                            client.onStateChange(lambda s: logger.info(f"🔄 [WA {company_id}] Estado: {s}"))
+                            client.onStateChange(lambda s: self._handle_state_change(company_id, s))
                             
                             while company_id in self.clients:
                                 if creator.state in ["ERROR", "browserClose", "serverClose", "deleteToken"]:
                                     self.status[company_id] = "DISCONNECTED"
+                                    # Força limpeza do cliente para o watchdog pegar
+                                    self.clients.pop(company_id, None) 
                                     break
                                 time.sleep(5)
                     except Exception as e:
@@ -247,6 +278,18 @@ class WhatsAppService:
                 if company_id in self.starting_sessions: self.starting_sessions.remove(company_id)
 
         threading.Thread(target=launch, daemon=True, name=f"WA_Launch_{company_id}").start()
+
+    def _handle_state_change(self, company_id, state):
+        logger.info(f"🔄 [WA {company_id}] Mudança de Estado: {state}")
+        self.status[company_id] = state
+        if state in ["DISCONNECTED", "CONFLICT", "UNPAIRED", "UNLAUNCHED"]:
+            logger.warning(f"⚠️ [WA {company_id}] Conexão instável détectada. Status: {state}")
+            # Se for conflito ou desemparelhado, limpamos a sessão para permitir novo QR
+            if state in ["CONFLICT", "UNPAIRED"]:
+                self.clean_session(company_id)
+            else:
+                self.status[company_id] = "DISCONNECTED"
+                self.clients.pop(company_id, None)
 
     def send_message(self, company_id, to_number, text):
         client = self.clients.get(company_id)
