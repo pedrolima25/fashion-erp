@@ -326,7 +326,11 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     total_clientes = db.query(Customer).filter(Customer.company_id == company_id).count()
     pedidos_pendentes = db.query(Sale).filter(Sale.company_id == company_id, Sale.status == "pending").count()
     
-    recentes = db.query(Sale).filter(Sale.company_id == company_id).order_by(Sale.date.desc()).limit(10).all()
+    # Priorizamos pedidos Pendentes no topo, depois ordenamos por data
+    recentes = db.query(Sale).filter(Sale.company_id == company_id).order_by(
+        case({Sale.status == "pending": 0}, else_=1),
+        Sale.date.desc()
+    ).limit(20).all()
     # Debug log (remover depois)
     print(f"DEBUG: Company {company_id} - Found {len(recentes)} recent sales. Total Hoje: {vendas_hoje}")
     
