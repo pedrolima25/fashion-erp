@@ -296,17 +296,20 @@ class WhatsAppService:
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
         
-        # Transforma para o formato s.whatsapp.net (mais robusto no backend)
+        # Estratégia de JID Inteligente
         to_number_str = str(to_number)
-        if "@" in to_number_str:
-            # Caso já tenha @lid ou @c.us, limpa apenas o sufixo
-            digits = "".join(filter(str.isdigit, to_number_str.split("@")[0]))
-            wa_id = f"{digits}@s.whatsapp.net"
+        if "@lid" in to_number_str:
+            # Mantém LID exatamente como veio
+            wa_id = to_number_str
+        elif "@" in to_number_str:
+            # Caso tenha outro sufixo, mantém
+            wa_id = to_number_str
         else:
+            # Número puro vira @c.us
             digits = "".join(filter(str.isdigit, to_number_str))
-            wa_id = f"{digits}@s.whatsapp.net"
+            wa_id = f"{digits}@c.us"
         
-        logger.info(f"📤 [WA {company_id}] Tentando enviar para JID: {wa_id} (Formatado de {to_number})")
+        logger.info(f"📤 [WA {company_id}] Tentando enviar para JID: {wa_id} (to_number: {to_number})")
         try:
             # Priming: Força o WhatsApp Web a localizar o contato antes de enviar
             # Isso resolve muitos erros de "No LID for user"
