@@ -311,14 +311,25 @@ class WhatsAppService:
             digits = "".join(filter(str.isdigit, to_number_str))
             wa_id = f"{digits}@c.us"
         
+        wa_id = wa_id.strip()
+
         logger.info(f"📤 [WA {company_id}] Tentando enviar para JID: {wa_id} (to_number: {to_number})")
         try:
-            # Priming: Força o WhatsApp Web a localizar o contato antes de enviar
-            # Isso resolve muitos erros de "No LID for user"
+            # ETAPA DE HARDENING: Resolve o contato no banco de dados local do WA Web
             try:
+                # 1. Verifica status do número (força resolução)
+                client.checkNumberStatus(wa_id)
+                
+                # 2. Priming via Presence
                 client.setPresence("composing", wa_id)
-                time.sleep(0.3)
-            except: pass
+                time.sleep(0.5)
+                
+                # 3. Força o "Touch" do contato via JS se for @lid
+                if "@lid" in wa_id:
+                    client.page.evaluate(f"async () => {{ try {{ await WPP.contact.getContact('{wa_id}'); }} catch(e) {{}} }}")
+                    time.sleep(0.5)
+            except:
+                pass
 
             client.sendText(wa_id, text)
             logger.info(f"📤 [WA {company_id}] Msg enviada para {wa_id}")
