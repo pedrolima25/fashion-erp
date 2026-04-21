@@ -223,12 +223,12 @@ class WhatsAppService:
                     "--disable-setuid-sandbox", 
                     "--disable-dev-shm-usage", 
                     "--disable-gpu", 
-                    "--single-process",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                    "--disable-site-isolation-trials",
                     "--no-first-run",
                     "--no-default-browser-check",
-                    "--disable-extensions"
+                    "--disable-extensions",
+                    "--disable-blink-features=AutomationControlled", # Esconde que é um robô
+                    "--window-size=1920,1080", # Resolução padrão de desktop
+                    "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" # User agent real
                 ]
                 
                 launch_kwargs = {
@@ -237,8 +237,10 @@ class WhatsAppService:
                     "statusFind": check_status,
                     "headless": True,
                     "browser_args": b_args,
-                    "autoClose": 0, # Mantém aberto permanentemente
-                    "useLid": True # Habilita suporte nativo a IDs modernos (LID)
+                    "autoClose": 0,
+                    "useLid": True,
+                    "disableWelcome": True, # Ganha velocidade
+                    "updatesLog": False    # Menos poluição nos logs
                 }
                 
                 if is_linux:
