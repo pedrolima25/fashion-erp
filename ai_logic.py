@@ -423,18 +423,40 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         is_pickup = state.get('delivery_type') == 'pickup'
         resumo_logistica = "Retirada" if is_pickup else "Entrega"
         
-        # VERSÃO ULTRA RÁPIDA (SOMENTE TEXTO) Conforme solicitado pelo usuário
-        resp = (f"✅ *PEDIDO CONFIRMADO!*\n\n"
-                f"🛍️ {product.name} ({variation.size})\n"
-                f"💰 *Total: R$ {total:.2f}* ({resumo_logistica})\n\n"
-                f"🔑 *PIX (COPIA E COLA):*\n\n"
-                f"{pix_code}\n\n"
-                f"💡 _Copie o código acima e pague no seu banco._")
+        # --- MONTAGEM DO COMPROVANTE RICO (Conforme solicitado) ---
         
+        # 1. Cabeçalho e Item
+        msg1 = (f"🥳 *Pedido Recebido, {client_name}!*\n\n"
+                f"👗 *Item:* {product.name} (Tam {variation.size})\n"
+                f"💰 *Subtotal:* R$ {item_price:.2f}\n"
+                f"📦 *Frete:* R$ {delivery_fee:.2f}\n"
+                f"⭐ *TOTAL: R$ {total:.2f}*\n\n"
+                f"📍 *{resumo_logistica}*")
+        
+        # 2. Dados da Loja (Endereço e Link se existirem)
+        if company.address:
+            msg1 += f"\n🏠 {company.address}"
+        if company.location_link:
+            msg1 += f"\n🔗 {company.location_link}"
+            
+        msg1 += f"\n\n💳 *Pagamento:* {payment_method}\n\n"
+        msg1 += ("⚠️ *IMPORTANTE:* Seu pedido está aguardando confirmação. "
+                 "Assim que virmos seu pagamento, confirmaremos o envio aqui! Obrigado! 🛍️")
+        
+        # 3. Código PIX (Segunda Mensagem via |SPLIT|)
+        if payment_method == "PIX":
+            msg2 = (f"🔑 *CHAVE PIX (Copia e Cola):*\n\n"
+                    f"{pix_code}\n\n"
+                    f"💵 *Valor:* R$ {total:.2f}\n\n"
+                    f"💡 *Dica:* Copie o código acima e pague no seu banco.")
+            resp = f"{msg1}|SPLIT|{msg2}"
+        else:
+            resp = msg1
+
         if state_key in rule_states:
             del rule_states[state_key]
 
-        logger.info(f"🚀 [Finalize] Respondendo com versão ULTRA RÁPIDA (Sem Imagem).")
+        logger.info(f"🚀 [Finalize] Respondendo com Comprovante RICO para {client_phone}.")
         return resp
         
     except Exception as e:
