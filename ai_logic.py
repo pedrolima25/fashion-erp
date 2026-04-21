@@ -405,15 +405,18 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
 
         # 7. Gerar Resposta PIX
         pix_info = ""
+        pix_qr_image = None
         if payment_method == "PIX":
             from payments import generate_pix_payment
             try:
                 pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
+                pix_qr_image = pix_res.get('qr_code_base64')
                 pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
                             f"{pix_res['qr_code']}\n\n"
                             f"💳 *Valor:* R$ {total:.2f}\n\n"
                             "💡 *Dica:* Copie o código acima e pague no seu banco.")
-            except:
+            except Exception as e:
+                logger.error(f"Erro ao gerar PIX: {e}")
                 pix_info = "\n\n⚠️ *Aviso:* Chame um atendente para receber a chave PIX."
         
         # 8. Localização
@@ -444,7 +447,7 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
             del rule_states[state_key]
 
         if "|SPLIT|" in resp:
-            return {"text": resp}
+            return {"text": resp, "image_base64": pix_qr_image}
         return resp
         
     except Exception as e:

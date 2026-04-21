@@ -174,9 +174,12 @@ class WhatsAppService:
                         elif text_to_send and "|SPLIT|" in text_to_send:
                             parts = [p.strip() for p in text_to_send.split("|SPLIT|") if p.strip()]
                             for i, part in enumerate(parts):
-                                if i == 0 and img_base64: self.send_image(company_id, full_jid, img_base64, part)
-                                else: self.send_message(company_id, full_jid, part)
-                                time.sleep(0.8)
+                                try:
+                                    if i == 0 and img_base64: self.send_image(company_id, full_jid, img_base64, part)
+                                    else: self.send_message(company_id, full_jid, part)
+                                    time.sleep(0.8)
+                                except Exception as e:
+                                    logger.error(f"❌ [WA {company_id}] Erro ao enviar part {i}: {e}")
                         else:
                             if img_base64: self.send_image(company_id, full_jid, img_base64, text_to_send)
                             elif text_to_send: self.send_message(company_id, full_jid, text_to_send)
