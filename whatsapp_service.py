@@ -237,7 +237,8 @@ class WhatsAppService:
                     "statusFind": check_status,
                     "headless": True,
                     "browser_args": b_args,
-                    "autoClose": 0 # Mantém aberto permanentemente
+                    "autoClose": 0, # Mantém aberto permanentemente
+                    "useLid": True # Habilita suporte nativo a IDs modernos (LID)
                 }
                 
                 if is_linux:
