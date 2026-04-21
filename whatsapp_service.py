@@ -193,6 +193,10 @@ class WhatsAppService:
                 
                 # 2. ENVIOS DE RESPOSTA (Não mantém DB aberto)
                 if resultado:
+                    # Normaliza string para dict para suportar |SPLIT| universalmente
+                    if isinstance(resultado, str):
+                        resultado = {"text": resultado}
+                        
                     if isinstance(resultado, dict):
                         text_to_send = resultado.get("text", "")
                         img_base64 = resultado.get("image_base64")
@@ -205,7 +209,7 @@ class WhatsAppService:
                                 cap = item.get("text", "")
                                 if img:
                                     self.send_image(company_id, full_jid, img, cap)
-                                    time.sleep(0.5) # Reduzido para fluidez
+                                    time.sleep(0.5) 
                         elif text_to_send and "|SPLIT|" in text_to_send:
                             parts = [p.strip() for p in text_to_send.split("|SPLIT|") if p.strip()]
                             for i, part in enumerate(parts):
@@ -217,9 +221,6 @@ class WhatsAppService:
                         else:
                             if img_base64: self.send_image(company_id, full_jid, img_base64, text_to_send)
                             elif text_to_send: self.send_message(company_id, full_jid, text_to_send)
-                    
-                    elif isinstance(resultado, str) and resultado:
-                        self.send_message(company_id, full_jid, resultado)
                 
                 t_total = time.perf_counter() - t_init
                 logger.info(f"⏱️ [Timer] Ciclo Total: {t_total:.2f}s")
