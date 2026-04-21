@@ -298,46 +298,60 @@ class WhatsAppService:
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
         
-        # Estratégia de JID Inteligente
-        to_number_str = str(to_number)
-        if "@lid" in to_number_str:
-            # Mantém LID exatamente como veio
-            wa_id = to_number_str
-        elif "@" in to_number_str:
-            # Caso tenha outro sufixo, mantém
+        to_number_str = str(to_number).strip()
+        if "@" in to_number_str:
             wa_id = to_number_str
         else:
-            # Número puro vira @c.us
             digits = "".join(filter(str.isdigit, to_number_str))
             wa_id = f"{digits}@c.us"
+
+        logger.info(f"📤 [WA {company_id}] Enviando para {wa_id}")
         
-        wa_id = wa_id.strip()
-
-        logger.info(f"📤 [WA {company_id}] Tentando enviar para JID: {wa_id} (to_number: {to_number})")
+        # ETAPA DE HARDENING (VERSÃO BLINDADA)
+        # Sincroniza o contato para evitar erro "No LID for user"
         try:
-            # ETAPA DE HARDENING: Resolve o contato no banco de dados local do WA Web
-            try:
-                # 1. Verifica status do número (força resolução)
-                client.checkNumberStatus(wa_id)
-                
-                # 2. Priming via Presence
-                client.setPresence("composing", wa_id)
-                time.sleep(0.5)
-                
-                # 3. Força o "Touch" do contato via JS se for @lid
-                if "@lid" in wa_id:
-                    client.page.evaluate(f"async () => {{ try {{ await WPP.contact.getContact('{wa_id}'); }} catch(e) {{}} }}")
-                    time.sleep(0.5)
-            except:
-                pass
+            priming_script = f"""
+                async () => {{
+                    try {{
+                        const jid = '{wa_id}';
+                        await WPP.contact.getContact(jid).catch(() => {{}});
+                        if (jid.endsWith('@c.us')) {{
+                            await WPP.contact.asyncSyncContact(jid).catch(() => {{}});
+                        }}
+                    }} catch (e) {{}}
+                }}
+            """
+            client.page.evaluate(priming_script)
+            client.setPresence("composing", wa_id)
+            time.sleep(0.4)
+        except:
+            pass
 
-            client.sendText(wa_id, text)
-            logger.info(f"📤 [WA {company_id}] Msg enviada para {wa_id}")
-            return True
-        except Exception as e:
-            logger.error(f"❌ [WA {company_id}] Erro Msg: {e}")
-            self.status[company_id] = "DISCONNECTED"
-            return False
+        # TENTATIVA DE ENVIO COM RETRY PARA LID
+        for attempt in range(2):
+            try:
+                client.sendText(wa_id, text)
+                logger.info(f"✅ [WA {company_id}] Enviada para {wa_id}")
+                return True
+            except Exception as e:
+                err_msg = str(e)
+                if "No LID" in err_msg and attempt == 0:
+                    logger.warning(f"⚠️ [WA {company_id}] Erro LID em {wa_id}, tentando sincronização forçada...")
+                    try:
+                        client.page.evaluate(f"async () => {{ await WPP.contact.asyncSyncContact('{wa_id}'); }}")
+                        time.sleep(1.5)
+                    except: pass
+                    continue
+                
+                logger.error(f"❌ [WA {company_id}] Erro Msg ({attempt+1}/2): {err_msg}")
+                # Não derruba a sessão por erro de LID ou mensagem individual
+                if "No LID" in err_msg or "Page.evaluate" in err_msg:
+                    return False
+                
+                # Para outros erros graves, marca como desconectado para o watchdog agir
+                # self.status[company_id] = "DISCONNECTED" 
+                return False
+        return False
 
     def get_groups(self, company_id, force_refresh=False):
         client = self.clients.get(company_id)
@@ -385,8 +399,7 @@ class WhatsAppService:
         client = self.clients.get(company_id)
         if not client or self.status.get(company_id) != "CONNECTED": return False
         
-        # Preserva o JID original se já tiver @
-        to_number_str = str(to_number)
+        to_number_str = str(to_number).strip()
         if "@" in to_number_str:
             wa_id = to_number_str
         else:
@@ -394,8 +407,9 @@ class WhatsAppService:
             wa_id = f"{digits}@c.us"
         
         try:
-            # Priming para imagens também
+            # Priming Rápido
             try:
+                client.page.evaluate(f"async () => {{ try {{ await WPP.contact.getContact('{wa_id}'); }} catch(e) {{}} }}")
                 client.setPresence("composing", wa_id)
                 time.sleep(0.3)
             except: pass
@@ -405,6 +419,7 @@ class WhatsAppService:
             os.makedirs(temp_dir, exist_ok=True)
             temp_file = os.path.join(temp_dir, f"t_{company_id}_{int(time.time())}.png")
             with open(temp_file, "wb") as f: f.write(base64.b64decode(clean_b64))
+            
             client.sendImage(wa_id, os.path.abspath(temp_file), "image.png", caption)
             logger.info(f"✅ [WA {company_id}] Imagem enviada para {wa_id}")
             try: os.remove(temp_file)

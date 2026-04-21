@@ -42,29 +42,19 @@ def generate_pix_payment(amount: float, description: str, token: str = None, sta
     # --- 2. PIX ESTÁTICO (CHAVE FIXA) ---
     if static_key:
         payload = generate_static_pix_payload(static_key, amount, company_name, merchant_city)
-        # Gera QR Code em Base64 usando Segno
-        out = io.BytesIO()
-        segno.make_qr(payload).save(out, kind='png', scale=5)
-        qr_base64 = base64.b64encode(out.getvalue()).decode('utf-8')
-        
         return {
             "type": "static",
             "qr_code": payload,
-            "qr_code_base64": qr_base64
+            "qr_code_base64": None # Removido para velocidade
         }
 
     # --- 3. FALLBACK (SIMULADO) ---
     mock_payload = f"00020126480014br.gov.bcb.pix0114+55929999999990208PAGAMENTO5204000053039865405{amount:.2f}5802BR5915AlessandroBarba6006Manaus62070503***6304ABCD"
     
-    # Gera QR Code em Base64 para o Mock também
-    out = io.BytesIO()
-    segno.make_qr(mock_payload).save(out, kind='png', scale=5)
-    qr_base64 = base64.b64encode(out.getvalue()).decode('utf-8')
-
     return {
         "type": "mock",
         "qr_code": mock_payload,
-        "qr_code_base64": qr_base64
+        "qr_code_base64": None # Removido para velocidade
     }
 
 def generate_static_pix_payload(key: str, amount: float, name: str, city: str):

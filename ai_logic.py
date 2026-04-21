@@ -410,38 +410,31 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         except Exception as e:
             logger.error(f"❌ [Finalize] Erro notificação: {e}")
 
-        pix_info = ""
         if payment_method == "PIX":
             from payments import generate_pix_payment
             try:
                 logger.info(f"🚀 [Finalize] Gerando PIX...")
                 pix_res = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name)
-                pix_info = (f"|SPLIT|🔑 *CHAVE PIX (Copia e Cola):*\n\n"
-                            f"{pix_res['qr_code']}\n\n"
-                            f"💳 *Valor:* R$ {total:.2f}\n\n"
-                            "💡 *Dica:* Copie o código acima e pague no seu banco.")
+                pix_code = pix_res.get('qr_code', 'Erro ao gerar PIX')
             except Exception as e:
                 logger.error(f"❌ [Finalize] Erro PIX: {e}")
-                pix_info = "\n\n⚠️ *Aviso:* Chame um atendente para receber a chave PIX."
+                pix_code = "Erro ao gerar PIX"
         
-        store_info = ""
-        if company.address:
-            store_info = f"\n\n📍 *Endereço da Loja:*\n{company.address}"
-            if company.location_link:
-                store_info += f"\n🗺️ *GPS:* {company.location_link}"
-
         is_pickup = state.get('delivery_type') == 'pickup'
         resumo_logistica = "Retirada" if is_pickup else "Entrega"
         
-        # VERSÃO MÍNIMA POSSÍVEL (Pedido do Usuário)
-        resp = (f"✅ Pedido: {product.name} ({variation.size})\n"
-                f"💰 Total: R$ {total:.2f} ({resumo_logistica})\n\n"
-                f"PIX: {pix_res.get('qr_code', 'Erro ao gerar Pix')}")
+        # VERSÃO ULTRA RÁPIDA (SOMENTE TEXTO) Conforme solicitado pelo usuário
+        resp = (f"✅ *PEDIDO CONFIRMADO!*\n\n"
+                f"🛍️ {product.name} ({variation.size})\n"
+                f"💰 *Total: R$ {total:.2f}* ({resumo_logistica})\n\n"
+                f"🔑 *PIX (COPIA E COLA):*\n\n"
+                f"{pix_code}\n\n"
+                f"💡 _Copie o código acima e pague no seu banco._")
         
         if state_key in rule_states:
             del rule_states[state_key]
 
-        logger.info(f"🚀 [Finalize] Respondendo com versão ULTRA SIMPLIFICADA.")
+        logger.info(f"🚀 [Finalize] Respondendo com versão ULTRA RÁPIDA (Sem Imagem).")
         return resp
         
     except Exception as e:
