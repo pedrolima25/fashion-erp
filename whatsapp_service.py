@@ -307,23 +307,9 @@ class WhatsAppService:
 
         logger.info(f"📤 [WA {company_id}] Enviando para {wa_id}")
         
-        # ETAPA DE HARDENING (VERSÃO BLINDADA)
-        # Sincroniza o contato para evitar erro "No LID for user"
+        # ETAPA DE HARDENING (VERSÃO LEVE)
         try:
-            priming_script = f"""
-                async () => {{
-                    try {{
-                        const jid = '{wa_id}';
-                        await WPP.contact.getContact(jid).catch(() => {{}});
-                        if (jid.endsWith('@c.us')) {{
-                            await WPP.contact.asyncSyncContact(jid).catch(() => {{}});
-                        }}
-                    }} catch (e) {{}}
-                }}
-            """
-            client.page.evaluate(priming_script)
             client.setPresence("composing", wa_id)
-            time.sleep(0.4)
         except:
             pass
 
@@ -336,10 +322,14 @@ class WhatsAppService:
             except Exception as e:
                 err_msg = str(e)
                 if "No LID" in err_msg and attempt == 0:
-                    logger.warning(f"⚠️ [WA {company_id}] Erro LID em {wa_id}, tentando sincronização forçada...")
+                    logger.warning(f"⚠️ [WA {company_id}] Erro LID em {wa_id}, sincronizando...")
                     try:
-                        client.page.evaluate(f"async () => {{ await WPP.contact.asyncSyncContact('{wa_id}'); }}")
-                        time.sleep(1.5)
+                        # Tenta sincronização pesada apenas na falha
+                        sync_script = f"async () => {{ await WPP.contact.asyncSyncContact('{wa_id}'); }}"
+                        # Chama evaluate e ignora o retorno para evitar o warning de corrotina não aguardada
+                        # No framework PlaywrightSafeThread, isso agenda a tarefa no loop correto
+                        client.page.evaluate(sync_script)
+                        time.sleep(1.2)
                     except: pass
                     continue
                 
