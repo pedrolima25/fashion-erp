@@ -446,8 +446,6 @@ def finalize_whatsapp_sale(client_phone, state, db, company_id, state_key):
         if state_key in rule_states:
             del rule_states[state_key]
 
-        if "|SPLIT|" in resp:
-            return {"text": resp, "image_base64": pix_qr_image}
         return resp
         
     except Exception as e:
