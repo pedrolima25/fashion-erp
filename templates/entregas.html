@@ -1,0 +1,309 @@
+{% extends "master.html" %}
+
+{% block title %}Entregas | Fashion ERP{% endblock %}
+{% block header_title %}Entregas{% endblock %}
+{% block breadcrumb %}Operacao de Delivery{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 1.5rem;">
+    <div class="glass glass-card">
+        <div class="widget-title">Aguardando</div>
+        <div class="widget-value" id="kpi-waiting">0</div>
+    </div>
+    <div class="glass glass-card">
+        <div class="widget-title">Atribuidas</div>
+        <div class="widget-value" id="kpi-assigned">0</div>
+    </div>
+    <div class="glass glass-card">
+        <div class="widget-title">Em Rota</div>
+        <div class="widget-value" id="kpi-route">0</div>
+    </div>
+    <div class="glass glass-card">
+        <div class="widget-title">Entregues</div>
+        <div class="widget-value" id="kpi-delivered">0</div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 340px 1fr; align-items: start;">
+    <aside class="glass" style="padding: 1.25rem;">
+        <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 1rem;">Entregadores</h3>
+        <div style="display: grid; gap: 0.75rem; margin-bottom: 1rem;">
+            <input id="driver-name" placeholder="Nome" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            <input id="driver-phone" placeholder="WhatsApp com DDD" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            <input id="driver-vehicle" placeholder="Veiculo / placa" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            <button onclick="saveDriver()" class="btn btn-primary" style="justify-content: center;">
+                <i class="ph ph-plus"></i> Cadastrar
+            </button>
+        </div>
+        <div id="drivers-list" style="display: grid; gap: 0.6rem;"></div>
+    </aside>
+
+    <section class="glass" style="padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem; font-weight: 800;">Pedidos de Entrega</h3>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="last-update" style="font-size: 0.75rem; color: var(--text-muted);">--:--</span>
+                <button onclick="loadAll()" class="btn btn-secondary" style="padding: 0.55rem 0.8rem;">
+                    <i class="ph ph-arrows-clockwise"></i>
+                </button>
+            </div>
+        </div>
+        <div id="orders-list" style="display: grid; gap: 0.85rem;"></div>
+    </section>
+</div>
+
+<script>
+    let drivers = [];
+    let orders = [];
+
+    async function readApiJson(res, fallbackMessage) {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+            throw new Error(data.error || fallbackMessage || `Erro ${res.status}`);
+        }
+        return data;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[ch]));
+    }
+
+    function statusLabel(status) {
+        return {
+            waiting: 'Aguardando',
+            assigned: 'Atribuida',
+            out_for_delivery: 'Em rota',
+            delivered: 'Entregue',
+            failed: 'Falhou'
+        }[status] || status;
+    }
+
+    function statusColor(status) {
+        return {
+            waiting: '#f59e0b',
+            assigned: '#6366f1',
+            out_for_delivery: '#0ea5e9',
+            delivered: '#10b981',
+            failed: '#ef4444'
+        }[status] || '#94a3b8';
+    }
+
+    async function loadDrivers() {
+        try {
+            const res = await fetch('/api/delivery/drivers');
+            const data = await readApiJson(res, 'Erro ao carregar entregadores.');
+            drivers = Array.isArray(data) ? data : [];
+            renderDrivers();
+        } catch (e) {
+            drivers = [];
+            renderDrivers();
+            alert(e.message || 'Erro ao carregar entregadores.');
+        }
+    }
+
+    async function loadOrders() {
+        try {
+            const res = await fetch('/api/delivery/orders');
+            const data = await readApiJson(res, 'Erro ao carregar pedidos de entrega.');
+            orders = Array.isArray(data) ? data : [];
+            renderOrders();
+            document.getElementById('last-update').innerText = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } catch (e) {
+            orders = [];
+            renderOrders();
+            console.error(e);
+        }
+    }
+
+    async function loadAll() {
+        await loadDrivers();
+        await loadOrders();
+    }
+
+    async function saveDriver() {
+        const payload = {
+            name: document.getElementById('driver-name').value.trim(),
+            phone: document.getElementById('driver-phone').value.trim(),
+            vehicle: document.getElementById('driver-vehicle').value.trim()
+        };
+        if (!payload.name || !payload.phone) return alert('Informe nome e WhatsApp do entregador.');
+        try {
+            const res = await apiFetch('/api/delivery/drivers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            await readApiJson(res, 'Erro ao cadastrar entregador.');
+            document.getElementById('driver-name').value = '';
+            document.getElementById('driver-phone').value = '';
+            document.getElementById('driver-vehicle').value = '';
+            await loadDrivers();
+        } catch (e) {
+            alert(e.message || 'Erro ao cadastrar entregador.');
+        }
+    }
+
+    async function deleteDriver(id) {
+        if (!confirm('Remover entregador?')) return;
+        try {
+            const res = await apiFetch(`/api/delivery/drivers/${id}`, { method: 'DELETE' });
+            await readApiJson(res, 'Erro ao remover entregador.');
+            await loadDrivers();
+        } catch (e) {
+            alert(e.message || 'Erro ao remover entregador.');
+        }
+    }
+
+    async function assignDriver(orderId) {
+        const select = document.getElementById(`driver-select-${orderId}`);
+        const driverId = parseInt(select.value);
+        if (!driverId) return alert('Selecione um entregador.');
+        try {
+            const res = await apiFetch(`/api/delivery/orders/${orderId}/assign`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({driver_id: driverId, send_receipt: true})
+            });
+            const data = await readApiJson(res, 'Erro ao atribuir entrega.');
+            if (!data.sent) alert('Entrega atribuida. O WhatsApp do entregador nao confirmou o envio; confira se o bot esta conectado.');
+            await loadOrders();
+        } catch (e) {
+            alert(e.message || 'Erro ao atribuir entrega.');
+        }
+    }
+
+    async function sendReceipt(orderId) {
+        try {
+            const res = await apiFetch(`/api/delivery/orders/${orderId}/send-driver`, { method: 'POST' });
+            const data = await readApiJson(res, 'Erro ao enviar comprovante.');
+            alert(data.sent ? 'Comprovante enviado ao entregador.' : 'Nao foi possivel enviar. Confira a conexao do WhatsApp.');
+        } catch (e) {
+            alert(e.message || 'Erro ao enviar comprovante.');
+        }
+    }
+
+    async function updateStatus(orderId, status) {
+        try {
+            const res = await apiFetch(`/api/delivery/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status})
+            });
+            await readApiJson(res, 'Erro ao atualizar entrega.');
+            await loadOrders();
+        } catch (e) {
+            alert(e.message || 'Erro ao atualizar entrega.');
+        }
+    }
+
+    function renderDrivers() {
+        const box = document.getElementById('drivers-list');
+        if (!drivers.length) {
+            box.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">Nenhum entregador cadastrado.</div>';
+            return;
+        }
+        box.innerHTML = drivers.map(d => `
+            <div style="border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.8rem; background: rgba(255,255,255,0.02);">
+                <div style="display: flex; justify-content: space-between; gap: 0.75rem;">
+                    <div>
+                        <div style="font-weight: 800;">${escapeHtml(d.name)}</div>
+                        <div style="font-size: 0.76rem; color: var(--text-muted);">${escapeHtml(d.phone)}</div>
+                        <div style="font-size: 0.76rem; color: var(--text-muted);">${escapeHtml(d.vehicle || '-')}</div>
+                    </div>
+                    <button onclick="deleteDriver(${d.id})" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderOrders() {
+        const counts = {waiting: 0, assigned: 0, out_for_delivery: 0, delivered: 0};
+        orders.forEach(o => { if (counts[o.delivery_status] !== undefined) counts[o.delivery_status]++; });
+        document.getElementById('kpi-waiting').innerText = counts.waiting;
+        document.getElementById('kpi-assigned').innerText = counts.assigned;
+        document.getElementById('kpi-route').innerText = counts.out_for_delivery;
+        document.getElementById('kpi-delivered').innerText = counts.delivered;
+
+        const box = document.getElementById('orders-list');
+        if (!orders.length) {
+            box.innerHTML = '<div style="color: var(--text-muted); padding: 2rem; text-align: center;">Nenhum pedido de entrega encontrado.</div>';
+            return;
+        }
+
+        box.innerHTML = orders.map(order => {
+            const color = statusColor(order.delivery_status);
+            const driverOptions = ['<option value="">Selecionar entregador</option>']
+                .concat(drivers.map(d => `<option value="${d.id}" ${order.driver && order.driver.id === d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>`))
+                .join('');
+            const items = (order.items || []).map(item => {
+                const details = [item.size, item.color].filter(Boolean).map(escapeHtml).join(' / ');
+                return `<div>${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}${details ? ` (${details})` : ''}</div>`;
+            }).join('') || '<div>Sem itens</div>';
+            const location = order.location
+                ? (/^https?:\/\//i.test(order.location)
+                    ? `<a href="${escapeHtml(order.location)}" target="_blank" rel="noopener" style="color: var(--primary-light); font-weight: 800;">Abrir mapa</a>`
+                    : escapeHtml(order.location))
+                : '-';
+
+            return `
+                <article style="border: 1px solid rgba(255,255,255,0.07); border-left: 4px solid ${color}; border-radius: 8px; background: rgba(255,255,255,0.025); padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 0.9rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Pedido #${order.id} - ${escapeHtml(order.date)}</div>
+                            <div style="font-size: 1rem; font-weight: 900;">${escapeHtml(order.customer)}</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted);">${escapeHtml(order.phone || '-')}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1rem; font-weight: 900;">R$ ${Number(order.total || 0).toFixed(2)}</div>
+                            <span style="display: inline-block; margin-top: 0.35rem; background: ${color}22; color: ${color}; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 900;">${statusLabel(order.delivery_status)}</span>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.85rem; color: var(--text-muted); font-size: 0.8rem;">
+                        <div>
+                            <strong style="color: white;">Destino</strong>
+                            <div>${escapeHtml(order.address || '-')}</div>
+                            <div>Ref.: ${escapeHtml(order.reference || '-')}</div>
+                            <div>${location}</div>
+                        </div>
+                        <div>
+                            <strong style="color: white;">Entregador</strong>
+                            <div>${order.driver ? escapeHtml(order.driver.name) : 'Sem entregador'}</div>
+                            <div>${order.driver ? escapeHtml(order.driver.phone) : '-'}</div>
+                            <div>${order.driver ? escapeHtml(order.driver.vehicle || '-') : '-'}</div>
+                        </div>
+                        <div>
+                            <strong style="color: white;">Itens</strong>
+                            ${items}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 0.75rem; margin-top: 1rem; align-items: center;">
+                        <select id="driver-select-${order.id}" style="width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                            ${driverOptions}
+                        </select>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
+                            <button onclick="assignDriver(${order.id})" class="btn btn-primary" style="padding: 0.55rem 0.8rem;"><i class="ph ph-user-plus"></i> Atribuir</button>
+                            <button onclick="sendReceipt(${order.id})" class="btn btn-secondary" style="padding: 0.55rem 0.8rem;"><i class="ph ph-whatsapp-logo"></i> Enviar</button>
+                            <button onclick="updateStatus(${order.id}, 'out_for_delivery')" class="btn btn-secondary" style="padding: 0.55rem 0.8rem;">Em rota</button>
+                            <button onclick="updateStatus(${order.id}, 'delivered')" class="btn btn-secondary" style="padding: 0.55rem 0.8rem; color: #10b981;">Entregue</button>
+                            <button onclick="updateStatus(${order.id}, 'failed')" class="btn btn-secondary" style="padding: 0.55rem 0.8rem; color: #ef4444;">Falhou</button>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    loadAll();
+    setInterval(loadOrders, 5000);
+</script>
+{% endblock %}

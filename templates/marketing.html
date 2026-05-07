@@ -69,27 +69,56 @@
 </div>
 
 <div class="dashboard-grid">
-    <!-- COLUNA 1: GRUPOS (Fixa para ambas as abas) -->
+    <!-- COLUNA 1: DESTINOS -->
     <div class="glass" style="padding: 1.5rem;">
         <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
-            <i class="fab fa-whatsapp" style="color: #25d366;"></i> Selecione os Grupos
+            <i class="fab fa-whatsapp" style="color: #25d366;"></i> Onde Publicar?
         </h3>
-        
-        <div id="loading-groups" style="text-align: center; padding: 2rem;">
-            <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--primary);"></i>
-            <p style="margin-top: 1rem; color: var(--text-muted);">Buscando grupos...</p>
+
+        <!-- OPÇÃO 1: STATUS -->
+        <div class="glass" style="padding: 1rem; margin-bottom: 1rem; border: 1px solid #25d366; background: rgba(37, 211, 102, 0.05); cursor: pointer;" onclick="document.getElementById('post-to-status').click()">
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" onclick="event.stopPropagation()">
+                <input type="checkbox" id="post-to-status" onchange="updateDestinationUI()" style="width: 1.3rem; height: 1.3rem; accent-color: #25d366;">
+                <div>
+                    <strong style="display: block; font-size: 0.95rem; color: #25d366;">📱 Meu Status</strong>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Todos os seus contatos vão ver</span>
+                </div>
+            </label>
         </div>
 
-        <div id="group-list-container" style="display: none;">
-            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                <span id="group-count" style="font-size: 0.85rem; color: var(--text-muted);">0 grupos</span>
-                <button onclick="loadGroups(true)" class="btn btn-secondary" style="font-size: 0.7rem; padding: 0.3rem 0.6rem; border: 1px solid var(--primary);">
-                    <i class="fas fa-sync"></i> Sincronizar WhatsApp
-                </button>
+        <!-- OPÇÃO 2: GRUPOS -->
+        <div class="glass" style="padding: 1rem; margin-bottom: 0.75rem; border: 1px solid var(--glass-border);">
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.75rem;" onclick="toggleGroupSection()">
+                <input type="checkbox" id="post-to-groups" onchange="updateDestinationUI()" style="width: 1.3rem; height: 1.3rem; accent-color: var(--primary);">
+                <div>
+                    <strong style="display: block; font-size: 0.95rem; color: var(--primary);">👥 Grupos do WhatsApp</strong>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Escolha os grupos para enviar</span>
+                </div>
+            </label>
+
+            <div id="group-section" style="display: none;">
+                <div id="loading-groups" style="text-align: center; padding: 1.5rem;">
+                    <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--primary);"></i>
+                    <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Buscando grupos...</p>
+                </div>
+
+                <div id="group-list-container" style="display: none;">
+                    <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="group-count" style="font-size: 0.8rem; color: var(--text-muted);">0 grupos</span>
+                        <button onclick="loadGroups(true)" class="btn btn-secondary" style="font-size: 0.65rem; padding: 0.25rem 0.5rem; border: 1px solid var(--primary);">
+                            <i class="fas fa-sync"></i> Atualizar
+                        </button>
+                    </div>
+                    <div id="group-list" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <!-- Injetado via JS -->
+                    </div>
+                </div>
             </div>
-            <div id="group-list" style="max-height: 550px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
-                <!-- Injetado via JS -->
-            </div>
+        </div>
+
+        <!-- INDICADOR DE DESTINOS SELECIONADOS -->
+        <div id="dest-summary" style="padding: 0.75rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); text-align: center;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">⚠️ Selecione pelo menos um destino acima</span>
         </div>
     </div>
 
@@ -122,7 +151,7 @@
                 </div>
 
                 <button id="btn-manual" onclick="startBroadcast('manual')" class="btn btn-primary" style="height: 60px; font-size: 1.1rem; width: 100%; justify-content: center; background: #10b981;">
-                    <i class="fas fa-paper-plane"></i> PUBLICAR NOS GRUPOS AGORA
+                    <i class="fas fa-paper-plane"></i> <span id="btn-manual-text">PUBLICAR AGORA</span>
                 </button>
             </div>
         </div>
@@ -294,6 +323,46 @@
 
     let companyName = "{{ company.name if company else 'CAMPANHA' }}".toUpperCase();
 
+    function toggleGroupSection() {
+        const cb = document.getElementById('post-to-groups');
+        const section = document.getElementById('group-section');
+        section.style.display = cb.checked ? 'block' : 'none';
+        if (cb.checked && !groupsLoaded) { loadGroups(); groupsLoaded = true; }
+        updateDestinationUI();
+    }
+    let groupsLoaded = false;
+
+    function updateDestinationUI() {
+        const toStatus = document.getElementById('post-to-status').checked;
+        const toGroups = document.getElementById('post-to-groups').checked;
+        const summary = document.getElementById('dest-summary');
+        const btnText = document.getElementById('btn-manual-text');
+        const parts = [];
+        if (toStatus) parts.push('📱 Status');
+        if (toGroups) parts.push('👥 Grupos');
+        if (parts.length > 0) {
+            summary.innerHTML = `<span style="font-size: 0.85rem; color: #25d366;">✅ Destinos: <strong>${parts.join(' + ')}</strong></span>`;
+            btnText.textContent = 'PUBLICAR AGORA';
+        } else {
+            summary.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted);">⚠️ Selecione pelo menos um destino acima</span>';
+            btnText.textContent = 'PUBLICAR AGORA';
+        }
+    }
+
+    async function sendBroadcast(payload) {
+        const res = await fetch('/api/whatsapp/broadcast', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) {
+            const reason = (data.failed || []).map(f => f.error).join(', ') || data.error || 'WhatsApp nao confirmou o envio.';
+            throw new Error(reason);
+        }
+        return data;
+    }
+
     async function startBroadcast() {
         const opening = document.getElementById('opening-manual').value.trim();
         const btn = document.getElementById('btn-manual');
@@ -301,65 +370,97 @@
         const statusText = document.getElementById('status-text-manual');
         const bar = document.getElementById('bar-manual');
 
-        if (selectedGroups.length === 0) return alert('Selecione os grupos!');
+        const postToStatus = document.getElementById('post-to-status').checked;
+        const postToGroups = document.getElementById('post-to-groups').checked;
+
+        if (!postToStatus && !postToGroups) return alert('Selecione pelo menos um destino: Status ou Grupos!');
+        if (postToGroups && selectedGroups.length === 0) return alert('Marque pelo menos um grupo na lista!');
         if (selectedProdsManual.length === 0) return alert('Selecione os produtos!');
+        if (postToStatus) {
+            const missingImage = selectedProdsManual
+                .map(id => products.find(x => x.id === id))
+                .filter(p => !p || !p.image);
+            if (missingImage.length) return alert('Para publicar no Status, o produto precisa ter foto cadastrada.');
+        }
 
         btn.disabled = true;
         statusDiv.style.display = 'block';
         
-        const total = selectedGroups.length * (selectedProdsManual.length + (opening ? 1 : 0));
+        const statusSteps = postToStatus ? selectedProdsManual.length : 0;
+        const groupSteps = postToGroups ? selectedGroups.length * (selectedProdsManual.length + (opening ? 1 : 0)) : 0;
+        const total = statusSteps + groupSteps;
         let done = 0;
 
         try {
-            // 2. Envia para os GRUPOS
-            for (let jid of selectedGroups) {
-                if (opening) {
-                    statusText.innerText = `Enviando texto de abertura...`;
-                    await fetch('/api/whatsapp/broadcast', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ jids: [jid], message: opening })
+            // 1. Posta no STATUS (se selecionado)
+            if (postToStatus) {
+                for (let pid of selectedProdsManual) {
+                    const p = products.find(x => x.id === pid);
+                    statusText.innerText = `📱 Postando "${p.name}" no Status...`;
+                    await sendBroadcast({
+                            jids: ["status@broadcast"], 
+                            message: `✨ *${companyName}* ✨\n\n👗 *${p.name}*\n\n💰 *PREÇO:* R$ ${p.price.toFixed(2)}`,
+                            image_base64: p.image 
                     });
                     done++;
                     bar.style.width = `${(done/total)*100}%`;
                     await new Promise(r => setTimeout(r, 2000));
                 }
-                for (let pid of selectedProdsManual) {
-                    const p = products.find(x => x.id === pid);
-                    statusText.innerText = `Publicando "${p.name}"...`;
-                    await fetch('/api/whatsapp/broadcast', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            jids: [jid], 
-                            message: `✨ *${companyName}* ✨\n\n👗 *${p.name}*\n\n💰 *PREÇO:* R$ ${p.price.toFixed(2)}`,
-                            image_base64: p.image 
-                        })
-                    });
-                    done++;
-                    bar.style.width = `${(done/total)*100}%`;
-                    await new Promise(r => setTimeout(r, 3000));
+            }
+
+            // 2. Envia para os GRUPOS (se selecionado)
+            if (postToGroups) {
+                for (let jid of selectedGroups) {
+                    if (opening) {
+                        statusText.innerText = `👥 Enviando texto de abertura...`;
+                        await sendBroadcast({ jids: [jid], message: opening });
+                        done++;
+                        bar.style.width = `${(done/total)*100}%`;
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                    for (let pid of selectedProdsManual) {
+                        const p = products.find(x => x.id === pid);
+                        statusText.innerText = `👥 Publicando "${p.name}"...`;
+                        await sendBroadcast({
+                                jids: [jid], 
+                                message: `✨ *${companyName}* ✨\n\n👗 *${p.name}*\n\n💰 *PREÇO:* R$ ${p.price.toFixed(2)}`,
+                                image_base64: p.image 
+                        });
+                        done++;
+                        bar.style.width = `${(done/total)*100}%`;
+                        await new Promise(r => setTimeout(r, 3000));
+                    }
                 }
             }
-            alert('🚀 Sucesso! Publicação manual concluída.');
+            bar.style.width = '100%';
+            alert('🚀 Sucesso! Publicação concluída.');
             statusDiv.style.display = 'none';
-        } catch (e) { alert('Erro durante o envio.'); }
+        } catch (e) { alert('Erro durante o envio: ' + e.message); }
         finally { btn.disabled = false; }
     }
 
     async function saveSchedule() {
-        if (selectedGroups.length === 0) return alert('Selecione os grupos!');
+        const postToStatus = document.getElementById('post-to-status').checked;
+        const postToGroups = document.getElementById('post-to-groups').checked;
+        if (!postToStatus && !postToGroups) return alert('Selecione pelo menos um destino: Status ou Grupos!');
+        if (postToGroups && selectedGroups.length === 0) return alert('Marque pelo menos um grupo na lista!');
         if (selectedProdsSched.length === 0) return alert('Selecione os produtos!');
+        if (postToStatus) {
+            const missingImage = selectedProdsSched
+                .map(id => products.find(x => x.id === id))
+                .filter(p => !p || !p.image);
+            if (missingImage.length) return alert('Para agendar Status, o produto precisa ter foto cadastrada.');
+        }
         const dt = document.getElementById('sched-dt').value;
         if (!dt) return alert('Escolha a data e hora.');
 
         const data = {
-            jids: selectedGroups,
+            group_jids: postToGroups ? selectedGroups : [],
             product_ids: selectedProdsSched,
             opening_msg: document.getElementById('opening-sched').value,
             scheduled_at: dt,
             frequency: document.getElementById('sched-freq').value,
-            post_to_status: false
+            post_to_status: postToStatus
         };
 
         const res = await fetch('/api/marketing/schedule', {
@@ -387,10 +488,13 @@
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                const destinations = [];
+                if (s.post_to_status) destinations.push('Status');
+                if (s.groups_count) destinations.push(`${s.groups_count} grupos`);
                 tr.innerHTML = `
                     <td style="padding: 1rem; font-weight: 700;">${s.scheduled_at}</td>
                     <td style="padding: 1rem;"><span class="badge" style="background: ${s.frequency === 'Diário' ? '#8b5cf6' : '#6366f1'};">${s.frequency}</span></td>
-                    <td style="padding: 1rem;">${s.groups_count} grupos</td>
+                    <td style="padding: 1rem;">${destinations.join(' + ') || '-'}</td>
                     <td style="padding: 1rem;">${s.products_count} produtos</td>
                     <td style="padding: 1rem; text-align: center;">
                         <button onclick="cancelSched(${s.id})" class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.4rem 0.8rem; font-size: 0.75rem;">Cancelar</button>
@@ -407,8 +511,8 @@
         loadSchedules();
     }
 
-    loadGroups();
     loadProducts();
     loadSchedules();
+    updateDestinationUI();
 </script>
 {% endblock %}

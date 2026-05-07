@@ -11,7 +11,44 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#6366f1">
+    <meta name="csrf-token" content="{{ request.session.get('csrf_token', '') }}">
     <link rel="apple-touch-icon" href="/static/icon-512.png">
+    <script>
+        window.CSRF_TOKEN = "{{ request.session.get('csrf_token', '') }}";
+        (function () {
+            const originalFetch = window.fetch.bind(window);
+            const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+            function attachCsrf(input, init) {
+                init = init ? { ...init } : {};
+                const method = (init.method || (input && input.method) || 'GET').toUpperCase();
+
+                try {
+                    const rawUrl = typeof input === 'string' ? input : input.url;
+                    const url = new URL(rawUrl, window.location.origin);
+                    const shouldAttach = url.origin === window.location.origin
+                        && url.pathname.startsWith('/api/')
+                        && unsafeMethods.has(method);
+
+                    if (shouldAttach && window.CSRF_TOKEN) {
+                        const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+                        headers.set('X-CSRF-Token', window.CSRF_TOKEN);
+                        init.headers = headers;
+                    }
+                } catch (e) {}
+
+                return init;
+            }
+
+            window.apiFetch = function (input, init) {
+                return originalFetch(input, attachCsrf(input, init));
+            };
+
+            window.fetch = function (input, init) {
+                return originalFetch(input, attachCsrf(input, init));
+            };
+        })();
+    </script>
     <style>
         /* Ajustes finos para o design premium */
         .status-badge {
@@ -60,6 +97,9 @@
                 <a href="/vendas" class="nav-item {% if active_page == 'sales' %}active{% endif %}">
                     <i class="ph ph-shopping-cart-simple"></i> Vender (PDV)
                 </a>
+                <a href="/entregas" class="nav-item {% if active_page == 'deliveries' %}active{% endif %}">
+                    <i class="ph ph-truck"></i> Entregas
+                </a>
                 <a href="/produtos" class="nav-item {% if active_page == 'products' %}active{% endif %}">
                     <i class="ph ph-t-shirt"></i> Produtos
                 </a>
@@ -71,6 +111,9 @@
                 </a>
                 <a href="/financeiro" class="nav-item {% if active_page == 'finance' %}active{% endif %}">
                     <i class="ph ph-coins"></i> Financeiro
+                </a>
+                <a href="/relatorios" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+                    <i class="ph ph-file-text"></i> Relatórios
                 </a>
                 <a href="/marketing" class="nav-item {% if active_page == 'marketing' %}active{% endif %}">
                     <i class="ph ph-megaphone-simple"></i> Divulgação

@@ -173,6 +173,7 @@ header {
     grid-template-columns: 1fr 380px;
     gap: 1.5rem;
     height: calc(100vh - 180px);
+    position: relative;
 }
 
 .pdv-products {

@@ -5,9 +5,77 @@
 {% block header_title %}Frente de Caixa (PDV){% endblock %}
 
 {% block content %}
+<!-- Modal: Fechar Caixa -->
+<div id="close-cash-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:380px; width:100%; padding:2rem; border:2px solid var(--secondary); border-radius:20px; box-shadow:0 0 30px rgba(244,63,94,0.3); text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(244,63,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem;">
+            <i class="ph ph-lock" style="color:var(--secondary); font-size:2rem;"></i>
+        </div>
+        <h3 style="margin-bottom:0.5rem;">Fechar Caixa</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Tem certeza? As vendas do dia serão totalizadas.</p>
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="document.getElementById('close-cash-modal').style.display='none'" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmCloseCash()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--secondary);">
+                <i class="ph ph-lock"></i> Fechar
+            </button>
+        </div>
+        <div id="close-cash-result" style="display:none; margin-top:1rem; padding:0.75rem; border-radius:8px; font-size:0.9rem;"></div>
+    </div>
+</div>
+
+<!-- Modal: Abrir Caixa -->
+<div id="open-cash-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:380px; width:100%; padding:2rem; border:2px solid var(--accent); border-radius:20px; box-shadow:0 0 30px rgba(16,185,129,0.3); text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem;">
+            <i class="ph ph-lock-open" style="color:var(--accent); font-size:2rem;"></i>
+        </div>
+        <h3 style="margin-bottom:0.5rem;">Abrir Caixa</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Informe o saldo inicial em dinheiro.</p>
+        <input id="cash-open-amount" type="number" min="0" step="0.01" value="0" placeholder="R$ 0,00"
+               style="width:100%; padding:0.875rem; border-radius:10px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:1.1rem; text-align:center; margin-bottom:1.25rem;"
+               onkeydown="if(event.key==='Enter') confirmOpenCash()">
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="closeOpenCashModal()" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmOpenCash()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--accent);">
+                <i class="ph ph-lock-open"></i> Abrir
+            </button>
+        </div>
+        <div id="cash-open-error" style="display:none; color:var(--secondary); margin-top:1rem; font-size:0.85rem;"></div>
+    </div>
+</div>
+
 <div class="pdv-container">
     <!-- Coluna da Esquerda: Catálogo -->
-    <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column;">
+    <div id="pdv-lock-overlay" style="display: none; position: absolute; inset: 0; background: rgba(11, 15, 26, 0.8); backdrop-filter: blur(8px); z-index: 50; border-radius: var(--radius-md); align-items: center; justify-content: center; text-align: center; padding: 2rem;">
+        <div>
+            <div style="width: 80px; height: 80px; background: rgba(244, 63, 94, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+                <i class="ph-bold ph-lock-key" style="color: var(--secondary); font-size: 2.5rem;"></i>
+            </div>
+            <h2 style="margin-bottom: 0.5rem;">Caixa Fechado</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Para começar a vender hoje, você precisa abrir o caixa.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="openCashModal()" class="btn btn-primary">
+                    <i class="ph ph-lock-open"></i> Abrir Caixa Agora
+                </button>
+                <button onclick="window.location.href='/painel'" class="btn btn-secondary">
+                    <i class="ph ph-layout"></i> Ir para Painel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Status do Caixa no PDV -->
+    <div id="cash-status-bar" class="glass" style="grid-column: 1 / -1; display: none; align-items: center; justify-content: space-between; padding: 0.75rem 1.5rem; margin-bottom: 1rem; border: 1px solid rgba(16, 185, 129, 0.2); border-left: 4px solid #10b981;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em;">CAIXA ABERTO</span>
+            <span id="cash-status-text" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+        </div>
+        <button onclick="closeCash()" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">
+            <i class="ph ph-lock"></i> Fechar Caixa
+        </button>
+    </div>
+    
+    <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; position: relative;">
         <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
             <div style="position: relative; flex: 1;">
                 <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
@@ -28,83 +96,170 @@
     </div>
 
     <!-- Coluna da Direita: Carrinho -->
-    <div class="glass pdv-cart" style="padding: 1.5rem;">
-        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fas fa-shopping-bag" style="color: var(--primary);"></i> Carrinho
-        </h3>
-        
-        <div id="cart-items" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
-            <!-- Itens do carrinho -->
-            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                <p>O carrinho está vazio.</p>
+    <div class="glass pdv-cart" style="padding: 1.25rem; display:flex; flex-direction:column; gap:0;">
+
+        <!-- Cabeçalho carrinho -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+            <h3 style="margin:0; display:flex; align-items:center; gap:0.5rem; font-size:1rem;">
+                <i class="ph ph-shopping-bag" style="color:var(--primary);"></i> Carrinho
+            </h3>
+            <span id="cart-count" style="background:var(--primary); color:white; border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">0 itens</span>
+        </div>
+
+        <!-- Itens do carrinho -->
+        <div id="cart-items" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem; min-height:80px; max-height:220px;">
+            <div style="text-align:center; color:var(--text-muted); padding:1.5rem 0; font-size:0.85rem;">
+                <i class="ph ph-shopping-cart" style="font-size:1.5rem; display:block; margin-bottom:0.5rem; opacity:0.4;"></i>
+                Carrinho vazio
             </div>
         </div>
 
-        <div style="margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                <span>Subtotal</span>
+        <!-- Separador -->
+        <div style="border-top:1px solid var(--glass-border); margin:1rem 0;"></div>
+
+        <!-- Cliente -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">CLIENTE (opcional)</label>
+            <input id="customer-name" type="text" placeholder="Nome do cliente" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem; margin-bottom:0.4rem;">
+            <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;">
+        </div>
+
+        <!-- Logística e Pagamento -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">LOGÍSTICA</label>
+                <select id="delivery-type" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;" onchange="toggleAddressField(this.value)">
+                    <option value="pickup">🏪 Retirada</option>
+                    <option value="delivery">🛵 Entrega</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">PAGAMENTO</label>
+                <select id="payment-method" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;">
+                    <option value="PIX">💠 PIX</option>
+                    <option value="Cartão">💳 Cartão</option>
+                    <option value="Dinheiro">💵 Dinheiro</option>
+                    <option value="Crediário">📋 Crediário</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Endereço de entrega -->
+        <div id="address-container" style="display:none; margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">ENDEREÇO</label>
+            <textarea id="delivery-address" placeholder="Rua, número, bairro..." style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; height:52px; font-size:0.82rem; resize:none; margin-bottom:0.4rem;"></textarea>
+            <input id="delivery-reference" placeholder="Referência (ex: próximo ao mercado)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; margin-bottom:0.4rem;">
+            <input id="delivery-location-link" placeholder="Link Google Maps (opcional)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; margin-bottom:0.4rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <label style="font-size:0.78rem; color:var(--text-muted); white-space:nowrap;">Taxa de entrega R$</label>
+                <input id="delivery-fee" type="number" value="0" min="0" step="0.5" style="flex:1; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;" onchange="updateCartTotals()">
+            </div>
+        </div>
+
+        <!-- Totais -->
+        <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:0.75rem; margin-bottom:0.75rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.35rem;">
+                <span style="color:var(--text-muted);">Subtotal</span>
                 <span id="cart-subtotal">R$ 0,00</span>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                <span>Desconto</span>
-                <input type="number" id="cart-discount" value="0" step="0.5" style="width: 80px; text-align: right; background: transparent; border: none; color: var(--secondary); font-weight: 600;" onchange="updateCartTotals()">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:0.35rem;">
+                <span style="color:var(--secondary);">Desconto R$</span>
+                <input type="number" id="cart-discount" value="0" min="0" step="0.5" style="width:70px; text-align:right; background:transparent; border:none; border-bottom:1px solid var(--secondary); color:var(--secondary); font-weight:600; font-size:0.85rem; padding:0 4px;" onchange="updateCartTotals()">
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem;">
+            <div id="cart-fee-row" style="display:none; justify-content:space-between; font-size:0.85rem; margin-bottom:0.35rem;">
+                <span style="color:var(--text-muted);">Frete</span>
+                <span id="cart-fee-display">R$ 0,00</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; padding-top:0.5rem; border-top:1px solid var(--glass-border); margin-top:0.25rem;">
                 <span>Total</span>
-                <span id="cart-total" style="color: var(--primary);">R$ 0,00</span>
+                <span id="cart-total" style="color:var(--accent);">R$ 0,00</span>
             </div>
+        </div>
 
-            <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div>
-                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Logística</label>
-                    <select id="delivery-type" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;" onchange="toggleAddressField(this.value)">
-                        <option value="pickup">Retirada</option>
-                        <option value="delivery">Entrega</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Pagamento</label>
-                    <select id="payment-method" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;">
-                        <option value="PIX">PIX</option>
-                        <option value="Cartão">Cartão</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                    </select>
-                </div>
+        <button onclick="finalizeSale()" id="btn-finalize" class="btn btn-primary" style="width:100%; justify-content:center; height:48px; font-size:1rem; font-weight:700;">
+            <i class="ph ph-check-circle"></i> Finalizar Venda
+        </button>
+    </div>
+</div>
+
+<!-- Modal de Variações -->
+<div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 420px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+        <h3 id="modal-title" style="margin:0;">Escolha o Tamanho</h3>
+        <button onclick="closeModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.25rem;"><i class="ph ph-x"></i></button>
+    </div>
+    <div id="variation-list" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1.5rem;"></div>
+</div>
+<div id="modal-overlay" style="display: none; position: fixed; inset:0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 999;" onclick="closeModal()"></div>
+
+<!-- Modal: Comprovante de Venda -->
+<div id="receipt-modal" style="display:none; position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:1rem; overflow-y:auto;">
+    <div class="glass" style="max-width:480px; width:100%; padding:2rem; border:2px solid var(--accent); border-radius:20px; box-shadow:0 0 40px rgba(16,185,129,0.2);">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <div style="width:56px;height:56px;background:rgba(16,185,129,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+                <i class="ph ph-check-circle" style="color:#10b981;font-size:2rem;"></i>
             </div>
+            <h2 style="margin:0; font-size:1.25rem; color:#10b981;">Venda Registrada!</h2>
+            <p id="receipt-sale-id" style="color:var(--text-muted); font-size:0.85rem; margin-top:0.25rem;"></p>
+        </div>
 
-            <div id="address-container" style="display: none; margin-top: 0.75rem;">
-                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Endereço Completo</label>
-                <textarea id="delivery-address" placeholder="Rua, Bairro, Ponto de Referência..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; height: 60px; font-size: 0.85rem; resize: none;"></textarea>
+        <!-- Dados do cliente -->
+        <div id="receipt-customer" style="display:none; background:rgba(255,255,255,0.04); border-radius:10px; padding:0.75rem 1rem; margin-bottom:1rem; font-size:0.85rem;">
+            <div style="font-weight:700; margin-bottom:0.25rem;"><i class="ph ph-user" style="margin-right:0.4rem;"></i><span id="receipt-customer-name"></span></div>
+            <div style="color:var(--text-muted);" id="receipt-customer-phone"></div>
+        </div>
+
+        <!-- Itens -->
+        <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:0.75rem 1rem; margin-bottom:1rem;">
+            <div style="font-weight:700; font-size:0.8rem; color:var(--text-muted); letter-spacing:0.05em; margin-bottom:0.75rem;">ITENS</div>
+            <div id="receipt-items"></div>
+        </div>
+
+        <!-- Totais -->
+        <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:0.75rem 1rem; margin-bottom:1.5rem; font-size:0.9rem;">
+            <div style="display:flex;justify-content:space-between; margin-bottom:0.4rem;">
+                <span style="color:var(--text-muted);">Subtotal</span><span id="receipt-subtotal"></span>
             </div>
+            <div id="receipt-discount-row" style="display:none;justify-content:space-between; margin-bottom:0.4rem; color:var(--secondary);">
+                <span>Desconto</span><span id="receipt-discount"></span>
+            </div>
+            <div id="receipt-fee-row" style="display:none;justify-content:space-between; margin-bottom:0.4rem; color:var(--text-muted);">
+                <span>Frete</span><span id="receipt-fee"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between; font-size:1.1rem; font-weight:800; padding-top:0.5rem; border-top:1px solid var(--glass-border); margin-top:0.4rem;">
+                <span>Total</span><span id="receipt-total" style="color:var(--accent);"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between; margin-top:0.5rem; font-size:0.8rem; color:var(--text-muted);">
+                <span>Pagamento</span><span id="receipt-payment"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between; margin-top:0.25rem; font-size:0.8rem; color:var(--text-muted);">
+                <span>Entrega</span><span id="receipt-delivery-type"></span>
+            </div>
+        </div>
 
-            <button onclick="finalizeSale()" id="btn-finalize" class="btn btn-primary" style="width: 100%; margin-top: 1rem; justify-content: center; height: 50px;">
-                <i class="fas fa-check"></i> Finalizar Venda
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="printCurrentReceipt()" class="btn btn-secondary" style="flex:1; justify-content:center;">
+                <i class="ph ph-printer"></i> Imprimir
+            </button>
+            <button onclick="newSale()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--accent);">
+                <i class="ph ph-plus"></i> Nova Venda
             </button>
         </div>
     </div>
 </div>
 
-<!-- Modal de Variações -->
-<div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 400px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-    <h3 id="modal-title" style="margin-bottom: 1.5rem;">Escolha o Tamanho</h3>
-    <div id="variation-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 2rem;">
-        <!-- Variações injetadas -->
-    </div>
-    <div style="display: flex; gap: 1rem;">
-        <button onclick="closeModal()" class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancelar</button>
-    </div>
-</div>
-<div id="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 999;"></div>
-
 <script>
     let products = [];
     let cart = [];
     let activeProduct = null;
+    let currentReceiptSaleId = null;
 
     async function loadProducts() {
-        const res = await fetch('/api/products');
-        products = await res.json();
-        renderProducts(products);
+        try {
+            const res = await fetch('/api/products');
+            products = await res.json();
+            renderProducts(products);
+        } catch(e) { console.error('Erro ao carregar produtos', e); }
     }
 
     async function loadCategories() {
@@ -119,25 +274,37 @@
 
     function renderProducts(list) {
         const grid = document.getElementById('product-grid');
+        if (list.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:3rem;"><i class="ph ph-magnifying-glass" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;"></i>Nenhum produto encontrado</div>';
+            return;
+        }
         grid.innerHTML = '';
         list.forEach(p => {
+            const totalStock = p.variations ? p.variations.reduce((s, v) => s + (v.stock || 0), 0) : 0;
+            const hasStock = totalStock > 0;
             const card = document.createElement('div');
             card.className = 'glass glass-card';
-            card.style.padding = '0.75rem';
-            card.style.cursor = 'pointer';
-            card.onclick = () => openVariationModal(p);
-            
-            const imgHtml = p.image 
-                ? `<img src="${p.image}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 0.75rem;">`
-                : `<div style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">
-                    <i class="fas fa-tshirt" style="font-size: 2rem; opacity: 0.2;"></i>
-                   </div>`;
+            card.style.cssText = 'padding:0; cursor:pointer; overflow:hidden; border-radius:12px; transition:transform 0.15s, box-shadow 0.15s; position:relative;';
+            if (!hasStock) card.style.opacity = '0.5';
+            card.onmouseenter = () => { if(hasStock) card.style.transform='translateY(-2px)'; };
+            card.onmouseleave = () => card.style.transform='';
+            card.onclick = () => hasStock && openVariationModal(p);
+
+            const imgHtml = p.image
+                ? `<img src="${p.image}" style="width:100%;height:110px;object-fit:cover;">`
+                : `<div style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;"><i class="ph ph-shirt" style="font-size:2rem;opacity:0.2;"></i></div>`;
+
+            const stockBadge = !hasStock
+                ? `<span style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">ESGOTADO</span>`
+                : (totalStock <= 3 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Ult. ${totalStock}</span>` : '');
 
             card.innerHTML = `
                 ${imgHtml}
-                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
-                <div style="color: var(--primary); font-weight: 700;">R$ ${p.price.toFixed(2)}</div>
-            `;
+                ${stockBadge}
+                <div style="padding:0.6rem 0.75rem;">
+                    <div style="font-weight:600;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;">${p.name}</div>
+                    <div style="color:var(--accent);font-weight:800;font-size:0.9rem;">R$ ${p.price.toFixed(2)}</div>
+                </div>`;
             grid.appendChild(card);
         });
     }
@@ -148,33 +315,37 @@
         const overlay = document.getElementById('modal-overlay');
         const list = document.getElementById('variation-list');
         document.getElementById('modal-title').innerText = p.name;
-        
         list.innerHTML = '';
+
+        const hasVariations = p.variations && p.variations.length > 0;
+        if (!hasVariations) {
+            addToCartDirect(p);
+            return;
+        }
+
         p.variations.forEach(v => {
             const btn = document.createElement('button');
-            btn.className = 'btn btn-secondary';
-            btn.style.fontSize = '0.8rem';
-            btn.style.flexDirection = 'column';
-            btn.style.height = 'auto';
-            btn.style.padding = '0.75rem 0.5rem';
-            
-            const colorHtml = v.color ? `<span style="font-size: 0.7rem; opacity: 0.6; display: block;">${v.color}</span>` : '';
-            btn.innerHTML = `
-                <span style="font-weight: 700;">${v.size}</span>
-                ${colorHtml}
-            `;
-            
-            btn.onclick = () => addToCart(p, v);
-            if (v.stock <= 0) {
-                btn.disabled = true;
-                btn.style.opacity = '0.3';
-                btn.innerHTML += ' <span style="font-size: 0.6rem; display: block;">(Esgotado)</span>';
+            const inStock = v.stock > 0;
+            btn.style.cssText = `padding:0.6rem 0.25rem;border-radius:8px;border:1px solid var(--glass-border);background:${inStock?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.2)'};color:${inStock?'white':'var(--text-muted)'};cursor:${inStock?'pointer':'default'};display:flex;flex-direction:column;align-items:center;gap:2px;transition:background 0.15s;`;
+            const colorDot = v.color ? `<span style="width:10px;height:10px;border-radius:50%;background:${v.color.toLowerCase()};border:1px solid rgba(255,255,255,0.3);display:inline-block;"></span>` : '';
+            btn.innerHTML = `<span style="font-weight:700;font-size:0.85rem;">${v.size}</span>${colorDot}<span style="font-size:0.65rem;color:var(--text-muted);">${inStock?`Est: ${v.stock}`:'Esgotado'}</span>`;
+            if (inStock) {
+                btn.onmouseenter = () => btn.style.background = 'rgba(99,102,241,0.25)';
+                btn.onmouseleave = () => btn.style.background = 'rgba(255,255,255,0.06)';
+                btn.onclick = () => addToCart(p, v);
             }
             list.appendChild(btn);
         });
 
         modal.style.display = 'block';
         overlay.style.display = 'block';
+    }
+
+    function addToCartDirect(p) {
+        const existing = cart.find(item => item.product_id === p.id && !item.variation_id);
+        if (existing) { existing.quantity++; }
+        else { cart.push({ product_id: p.id, variation_id: null, name: p.name, size: '', color: '', price: p.price, quantity: 1 }); }
+        renderCart();
     }
 
     function closeModal() {
@@ -184,55 +355,46 @@
 
     function addToCart(p, v) {
         const existing = cart.find(item => item.variation_id === v.id);
-        if (existing) {
-            existing.quantity++;
-        } else {
-            cart.push({
-                product_id: p.id,
-                variation_id: v.id,
-                name: p.name,
-                size: v.size,
-                color: v.color || "",
-                price: v.price || p.price,
-                quantity: 1
-            });
-        }
+        if (existing) { existing.quantity++; }
+        else { cart.push({ product_id: p.id, variation_id: v.id, name: p.name, size: v.size, color: v.color || '', price: v.price || p.price, quantity: 1 }); }
         renderCart();
         closeModal();
     }
 
     function renderCart() {
         const container = document.getElementById('cart-items');
-        container.innerHTML = '';
+        const countEl = document.getElementById('cart-count');
+        const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+        countEl.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'itens'}`;
+
         if (cart.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;"><p>O carrinho está vazio.</p></div>';
+            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem 0;font-size:0.85rem;"><i class="ph ph-shopping-cart" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:0.4;"></i>Carrinho vazio</div>';
         } else {
+            container.innerHTML = '';
             cart.forEach((item, index) => {
                 const div = document.createElement('div');
-                div.className = 'glass';
-                div.style.padding = '1rem';
-                div.style.display = 'flex';
-                div.style.justifyContent = 'space-between';
-                div.style.alignItems = 'center';
+                div.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:8px;';
+                const label = item.size ? `${item.name} <span style="opacity:0.6;font-size:0.75rem;">/ ${item.size}${item.color?' · '+item.color:''}</span>` : item.name;
                 div.innerHTML = `
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.9rem;">${item.name}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">Tam: ${item.size} ${item.color ? '| ' + item.color : ''} | R$ ${item.price.toFixed(2)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+                        <div style="font-size:0.75rem;color:var(--accent);font-weight:700;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="number" value="${item.quantity}" style="width: 50px; background: rgba(0,0,0,0.2); border: none; color: white; padding: 0.25rem; border-radius: 4px; text-align: center;" onchange="updateQty(${index}, this.value)">
-                        <button onclick="removeFromCart(${index})" style="background: none; border: none; color: var(--secondary); cursor: pointer;"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
+                    <div style="display:flex;align-items:center;gap:0.35rem;">
+                        <button onclick="changeQty(${index},-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">−</button>
+                        <span style="font-size:0.85rem;font-weight:700;min-width:20px;text-align:center;">${item.quantity}</span>
+                        <button onclick="changeQty(${index},1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">+</button>
+                        <button onclick="removeFromCart(${index})" style="width:22px;height:22px;border-radius:50%;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;margin-left:2px;"><i class="ph ph-trash"></i></button>
+                    </div>`;
                 container.appendChild(div);
             });
         }
         updateCartTotals();
     }
 
-    function updateQty(index, qty) {
-        cart[index].quantity = parseInt(qty);
-        updateCartTotals();
+    function changeQty(index, delta) {
+        cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+        renderCart();
     }
 
     function removeFromCart(index) {
@@ -243,20 +405,33 @@
     function updateCartTotals() {
         const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
         const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
-        const total = Math.max(0, subtotal - discount);
-        
+        const isDelivery = document.getElementById('delivery-type').value === 'delivery';
+        const fee = isDelivery ? (parseFloat(document.getElementById('delivery-fee').value) || 0) : 0;
+        const total = Math.max(0, subtotal - discount + fee);
+
         document.getElementById('cart-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
         document.getElementById('cart-total').innerText = `R$ ${total.toFixed(2)}`;
+
+        const feeRow = document.getElementById('cart-fee-row');
+        if (fee > 0 && isDelivery) {
+            feeRow.style.display = 'flex';
+            document.getElementById('cart-fee-display').innerText = `R$ ${fee.toFixed(2)}`;
+        } else {
+            feeRow.style.display = 'none';
+        }
     }
 
     async function finalizeSale() {
-        if (cart.length === 0) return alert('Carrinho vazio!');
-        
+        if (cart.length === 0) { alert('Adicione produtos ao carrinho.'); return; }
+
         const btn = document.getElementById('btn-finalize');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        btn.innerHTML = '<i class="ph ph-spinner"></i> Processando...';
 
-        const data = {
+        const deliveryType = document.getElementById('delivery-type').value;
+        const isDelivery = deliveryType === 'delivery';
+
+        const payload = {
             items: cart.map(item => ({
                 product_id: item.product_id,
                 variation_id: item.variation_id,
@@ -265,48 +440,217 @@
             })),
             payment_method: document.getElementById('payment-method').value,
             discount: parseFloat(document.getElementById('cart-discount').value) || 0,
-            delivery_type: document.getElementById('delivery-type').value,
-            delivery_address: document.getElementById('delivery-address').value
+            delivery_type: deliveryType,
+            delivery_fee: isDelivery ? (parseFloat(document.getElementById('delivery-fee').value) || 0) : 0,
+            delivery_address: isDelivery ? document.getElementById('delivery-address').value : '',
+            delivery_reference: isDelivery ? document.getElementById('delivery-reference').value : '',
+            delivery_location_link: isDelivery ? document.getElementById('delivery-location-link').value : '',
+            customer_name: document.getElementById('customer-name').value.trim() || null,
+            customer_phone: document.getElementById('customer-phone').value.trim() || null
         };
 
         try {
             const res = await fetch('/api/sales', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
-            if (res.ok) {
-                alert('Venda finalizada com sucesso!');
-                cart = [];
-                renderCart();
-                document.getElementById('cart-discount').value = 0;
-                loadProducts();
+            const data = await res.json();
+            if (data.success) {
+                currentReceiptSaleId = data.sale_id;
+                await showReceipt(data.sale_id);
             } else {
-                alert('Erro ao finalizar venda.');
+                alert(data.error || 'Erro ao finalizar venda.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
             }
         } catch (e) {
             alert('Falha na conexão.');
-        } finally {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check"></i> Finalizar Venda';
+            btn.innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
         }
     }
 
-    document.getElementById('search-product').onkeyup = (e) => {
-        const query = e.target.value.toLowerCase();
-        const filtered = products.filter(p => p.name.toLowerCase().includes(query));
-        renderProducts(filtered);
+    async function showReceipt(saleId) {
+        try {
+            const res = await fetch(`/api/sales/${saleId}`);
+            const sale = await res.json();
+
+            document.getElementById('receipt-sale-id').textContent = `Pedido #${sale.id} · ${sale.date}`;
+
+            const custEl = document.getElementById('receipt-customer');
+            if (sale.customer) {
+                document.getElementById('receipt-customer-name').textContent = sale.customer.name;
+                document.getElementById('receipt-customer-phone').textContent = sale.customer.phone || '';
+                custEl.style.display = 'block';
+            } else { custEl.style.display = 'none'; }
+
+            const itemsEl = document.getElementById('receipt-items');
+            itemsEl.innerHTML = sale.items.map(i => `
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.4rem;">
+                    <span>${i.nome}${i.tamanho?' <span style="opacity:0.6">/ '+i.tamanho+'</span>':''} × ${i.qtd}</span>
+                    <span style="font-weight:600;">R$ ${i.total.toFixed(2)}</span>
+                </div>`).join('');
+
+            const subtotal = sale.items.reduce((s, i) => s + i.total, 0);
+            document.getElementById('receipt-subtotal').textContent = `R$ ${subtotal.toFixed(2)}`;
+
+            const discRow = document.getElementById('receipt-discount-row');
+            if (sale.discount > 0) {
+                discRow.style.display = 'flex';
+                document.getElementById('receipt-discount').textContent = `− R$ ${sale.discount.toFixed(2)}`;
+            } else { discRow.style.display = 'none'; }
+
+            const feeRow = document.getElementById('receipt-fee-row');
+            if (sale.delivery_fee > 0) {
+                feeRow.style.display = 'flex';
+                document.getElementById('receipt-fee').textContent = `R$ ${sale.delivery_fee.toFixed(2)}`;
+            } else { feeRow.style.display = 'none'; }
+
+            document.getElementById('receipt-total').textContent = `R$ ${sale.total_amount.toFixed(2)}`;
+            document.getElementById('receipt-payment').textContent = sale.payment_method;
+            document.getElementById('receipt-delivery-type').textContent = sale.delivery_type === 'delivery' ? '🛵 Entrega' : '🏪 Retirada';
+
+            document.getElementById('receipt-modal').style.display = 'flex';
+        } catch(e) {
+            newSale();
+        }
+    }
+
+    function printCurrentReceipt() {
+        if (currentReceiptSaleId) {
+            window.open(`/api/sales/${currentReceiptSaleId}/receipt`, '_blank');
+        }
+    }
+
+    function newSale() {
+        cart = [];
+        renderCart();
+        document.getElementById('cart-discount').value = 0;
+        document.getElementById('delivery-fee').value = 0;
+        document.getElementById('customer-name').value = '';
+        document.getElementById('customer-phone').value = '';
+        document.getElementById('delivery-address').value = '';
+        document.getElementById('delivery-reference').value = '';
+        document.getElementById('delivery-location-link').value = '';
+        document.getElementById('delivery-type').value = 'pickup';
+        toggleAddressField('pickup');
+        document.getElementById('receipt-modal').style.display = 'none';
+        document.getElementById('btn-finalize').disabled = false;
+        document.getElementById('btn-finalize').innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
+        loadProducts();
+    }
+
+    document.getElementById('search-product').oninput = (e) => {
+        const q = e.target.value.toLowerCase();
+        renderProducts(q ? products.filter(p => p.name.toLowerCase().includes(q)) : products);
     };
 
     function toggleAddressField(val) {
         document.getElementById('address-container').style.display = val === 'delivery' ? 'block' : 'none';
+        updateCartTotals();
     }
 
     document.getElementById('filter-category').onchange = (e) => {
         const cat = e.target.value;
-        const filtered = cat ? products.filter(p => p.category === cat) : products;
-        renderProducts(filtered);
+        renderProducts(cat ? products.filter(p => p.category === cat) : products);
     };
+
+    // --- GESTÃO DE CAIXA NO PDV ---
+    window.openCashModal = function() {
+        const modal = document.getElementById('open-cash-modal');
+        const input = document.getElementById('cash-open-amount');
+        const errEl = document.getElementById('cash-open-error');
+        errEl.style.display = 'none';
+        input.value = '0';
+        modal.style.display = 'flex';
+        setTimeout(() => input.focus(), 100);
+    };
+
+    window.closeOpenCashModal = function() {
+        document.getElementById('open-cash-modal').style.display = 'none';
+    };
+
+    window.confirmOpenCash = async function() {
+        const input = document.getElementById('cash-open-amount');
+        const errEl = document.getElementById('cash-open-error');
+        const amount = parseFloat(input.value) || 0;
+        errEl.style.display = 'none';
+        try {
+            const res = await fetch('/api/cash/open', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({amount})
+            });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                errEl.textContent = data.error || 'Erro ao abrir caixa.';
+                errEl.style.display = 'block';
+            }
+        } catch (e) {
+            errEl.textContent = 'Erro de conexão. Verifique sua internet.';
+            errEl.style.display = 'block';
+        }
+    };
+
+    window.closeCash = function() {
+        const modal = document.getElementById('close-cash-modal');
+        const result = document.getElementById('close-cash-result');
+        result.style.display = 'none';
+        modal.style.display = 'flex';
+    };
+
+    window.confirmCloseCash = async function() {
+        const result = document.getElementById('close-cash-result');
+        result.style.display = 'none';
+        try {
+            const res = await fetch('/api/cash/close', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                result.style.background = 'rgba(16,185,129,0.15)';
+                result.style.color = '#10b981';
+                result.style.border = '1px solid rgba(16,185,129,0.3)';
+                result.textContent = `Caixa fechado! Saldo Final: R$ ${Number(data.final_balance || 0).toFixed(2)}`;
+                result.style.display = 'block';
+                setTimeout(() => location.reload(), 1800);
+            } else {
+                result.style.background = 'rgba(244,63,94,0.15)';
+                result.style.color = 'var(--secondary)';
+                result.style.border = '1px solid rgba(244,63,94,0.3)';
+                result.textContent = data.error || 'Não foi possível fechar o caixa.';
+                result.style.display = 'block';
+            }
+        } catch (e) {
+            result.style.background = 'rgba(244,63,94,0.15)';
+            result.style.color = 'var(--secondary)';
+            result.style.border = '1px solid rgba(244,63,94,0.3)';
+            result.textContent = 'Erro de conexão ao fechar caixa.';
+            result.style.display = 'block';
+        }
+    };
+
+    async function checkCash() {
+        const res = await fetch('/api/cash/status');
+        const data = await res.json();
+        const overlay = document.getElementById('pdv-lock-overlay');
+        const statusBar = document.getElementById('cash-status-bar');
+        
+        if (!data.is_open) {
+            overlay.style.display = 'flex';
+            statusBar.style.display = 'none';
+            document.getElementById('btn-finalize').disabled = true;
+            document.getElementById('btn-finalize').innerText = 'Caixa Fechado';
+        } else {
+            overlay.style.display = 'none';
+            statusBar.style.display = 'flex';
+            document.getElementById('cash-status-text').innerText = `Iniciado às ${data.opened_at} | Saldo: R$ ${data.opening_balance.toFixed(2)}`;
+            document.getElementById('btn-finalize').disabled = false;
+            document.getElementById('btn-finalize').innerHTML = '<i class="fas fa-check"></i> Finalizar Venda';
+        }
+    }
+    checkCash();
 
     loadCategories();
     loadProducts();

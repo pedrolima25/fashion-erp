@@ -1,0 +1,443 @@
+{% extends "master.html" %}
+{% block title %}Relatórios | Fashion ERP Pro{% endblock %}
+{% block header_title %}Relatórios{% endblock %}
+
+{% block content %}
+<!-- Filtro de período -->
+<div class="glass" style="padding:1.25rem 1.5rem; margin-bottom:1.5rem; display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+    <div style="flex:1; min-width:150px;">
+        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">DATA INICIAL</label>
+        <input type="date" id="start-date" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+    </div>
+    <div style="flex:1; min-width:150px;">
+        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">DATA FINAL</label>
+        <input type="date" id="end-date" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+    </div>
+    <button onclick="loadAll()" class="btn btn-primary" style="height:40px; padding:0 1.5rem; white-space:nowrap;">
+        <i class="ph ph-funnel"></i> Filtrar
+    </button>
+    <button onclick="exportCSV()" class="btn btn-secondary" style="height:40px; padding:0 1.25rem; white-space:nowrap; border-color:var(--accent); color:var(--accent);">
+        <i class="ph ph-file-csv"></i> Exportar CSV
+    </button>
+</div>
+
+<!-- Abas -->
+<div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+    <button class="tab-btn active" onclick="switchTab('vendas')" id="tab-vendas">
+        <i class="ph ph-chart-bar"></i> Vendas
+    </button>
+    <button class="tab-btn" onclick="switchTab('produtos')" id="tab-produtos">
+        <i class="ph ph-shirt"></i> Produtos
+    </button>
+    <button class="tab-btn" onclick="switchTab('clientes')" id="tab-clientes">
+        <i class="ph ph-users"></i> Clientes
+    </button>
+    <button class="tab-btn" onclick="switchTab('estoque')" id="tab-estoque">
+        <i class="ph ph-package"></i> Estoque
+    </button>
+</div>
+
+<style>
+.tab-btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+}
+.tab-btn.active {
+    background: rgba(99,102,241,0.2);
+    border-color: var(--primary);
+    color: white;
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.stat-card { background: rgba(255,255,255,0.04); border-radius:12px; padding:1.25rem; border:1px solid var(--glass-border); }
+.stat-label { font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; margin-bottom:0.4rem; }
+.stat-value { font-size:1.6rem; font-weight:800; }
+table { width:100%; border-collapse:separate; border-spacing:0 4px; }
+thead th { font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; padding:0.5rem 0.75rem; text-align:left; }
+tbody tr { background:rgba(255,255,255,0.03); border-radius:8px; }
+tbody td { padding:0.75rem; font-size:0.85rem; }
+tbody tr:hover { background:rgba(99,102,241,0.08); }
+.badge-ok     { background:rgba(16,185,129,0.15); color:#10b981; padding:3px 8px; border-radius:20px; font-size:0.7rem; font-weight:800; }
+.badge-baixo  { background:rgba(245,158,11,0.15); color:#f59e0b; padding:3px 8px; border-radius:20px; font-size:0.7rem; font-weight:800; }
+.badge-esgot  { background:rgba(239,68,68,0.15);  color:#ef4444;  padding:3px 8px; border-radius:20px; font-size:0.7rem; font-weight:800; }
+</style>
+
+<!-- ===== ABA VENDAS ===== -->
+<div id="panel-vendas" class="tab-panel active">
+    <!-- KPIs -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div class="stat-card">
+            <div class="stat-label">FATURAMENTO</div>
+            <div class="stat-value" id="kpi-revenue" style="color:var(--accent);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">PEDIDOS</div>
+            <div class="stat-value" id="kpi-orders">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">TICKET MÉDIO</div>
+            <div class="stat-value" id="kpi-ticket" style="color:var(--primary);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">DESCONTO TOTAL</div>
+            <div class="stat-value" id="kpi-discount" style="color:var(--secondary);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">FRETE COBRADO</div>
+            <div class="stat-value" id="kpi-freight" style="color:#f59e0b;">—</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+        <!-- Pagamentos -->
+        <div class="glass" style="padding:1.25rem;">
+            <div style="font-weight:700; margin-bottom:1rem; font-size:0.9rem;"><i class="ph ph-credit-card" style="color:var(--primary);"></i> Por Método de Pagamento</div>
+            <div id="payment-bars"></div>
+        </div>
+        <!-- Logística -->
+        <div class="glass" style="padding:1.25rem;">
+            <div style="font-weight:700; margin-bottom:1rem; font-size:0.9rem;"><i class="ph ph-motorcycle" style="color:#f59e0b;"></i> Retirada vs Entrega</div>
+            <div id="delivery-bars"></div>
+        </div>
+    </div>
+
+    <!-- Gráfico diário -->
+    <div class="glass" style="padding:1.25rem; margin-bottom:1.5rem;">
+        <div style="font-weight:700; margin-bottom:1rem; font-size:0.9rem;"><i class="ph ph-chart-line-up" style="color:var(--accent);"></i> Faturamento por Dia</div>
+        <div style="height:200px;"><canvas id="daily-chart"></canvas></div>
+    </div>
+
+    <!-- Tabela vendas -->
+    <div class="glass" style="padding:1.25rem;">
+        <div style="font-weight:700; margin-bottom:1rem; font-size:0.9rem;"><i class="ph ph-list" style="color:var(--primary);"></i> Lista de Vendas</div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>#</th><th>DATA</th><th>CLIENTE</th><th>MÉTODO</th><th>ENTREGA</th><th>STATUS</th><th style="text-align:right;">TOTAL</th></tr></thead>
+                <tbody id="sales-tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
+            </table>
+        </div>
+        <div style="margin-top:1rem; text-align:right; font-weight:800; font-size:1.1rem;">
+            Total: <span id="sales-total" style="color:var(--accent);">R$ 0,00</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ABA PRODUTOS ===== -->
+<div id="panel-produtos" class="tab-panel">
+    <div class="glass" style="padding:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div style="font-weight:700; font-size:0.9rem;"><i class="ph ph-shirt" style="color:var(--primary);"></i> Produtos Mais Vendidos</div>
+            <span style="font-size:0.78rem; color:var(--text-muted);">Por receita no período</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>#</th><th>PRODUTO</th><th>TAMANHO</th><th style="text-align:right;">QTD VENDIDA</th><th style="text-align:right;">RECEITA</th><th style="text-align:right;">CUSTO</th><th style="text-align:right;">LUCRO</th><th style="text-align:right;">MARGEM</th></tr></thead>
+                <tbody id="products-tbody"><tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ABA CLIENTES ===== -->
+<div id="panel-clientes" class="tab-panel">
+    <div class="glass" style="padding:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div style="font-weight:700; font-size:0.9rem;"><i class="ph ph-crown" style="color:#f59e0b;"></i> Melhores Clientes</div>
+            <span style="font-size:0.78rem; color:var(--text-muted);">Ordenado por gasto total</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>POS.</th><th>CLIENTE</th><th>TELEFONE</th><th style="text-align:right;">PEDIDOS</th><th style="text-align:right;">TICKET MÉDIO</th><th style="text-align:right;">TOTAL GASTO</th><th>ÚLT. COMPRA</th></tr></thead>
+                <tbody id="customers-tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ABA ESTOQUE ===== -->
+<div id="panel-estoque" class="tab-panel">
+    <!-- KPIs estoque -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div class="stat-card">
+            <div class="stat-label">TOTAL PEÇAS</div>
+            <div class="stat-value" id="stk-total">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">VALOR EM ESTOQUE</div>
+            <div class="stat-value" id="stk-value" style="color:var(--accent);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">ESGOTADOS</div>
+            <div class="stat-value" id="stk-zero" style="color:var(--secondary);">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">ESTOQUE BAIXO</div>
+            <div class="stat-value" id="stk-low" style="color:#f59e0b;">—</div>
+        </div>
+    </div>
+    <div class="glass" style="padding:1.25rem;">
+        <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
+            <div style="font-weight:700; font-size:0.9rem; flex:1;"><i class="ph ph-package" style="color:#f59e0b;"></i> Posição de Estoque</div>
+            <select id="stock-filter" onchange="filterStock()" style="padding:0.4rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; font-size:0.8rem;">
+                <option value="all">Todos</option>
+                <option value="esgotado">Esgotados</option>
+                <option value="baixo">Estoque Baixo (≤3)</option>
+                <option value="ok">Em Estoque</option>
+            </select>
+            <input id="stock-search" type="text" placeholder="Buscar produto..." oninput="filterStock()" style="padding:0.4rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem; width:180px;">
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>TAMANHO</th><th>COR</th><th style="text-align:right;">ESTOQUE</th><th style="text-align:right;">PREÇO</th><th style="text-align:right;">CUSTO</th><th style="text-align:right;">VALOR TOTAL</th><th>STATUS</th></tr></thead>
+                <tbody id="stock-tbody"><tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const today     = new Date().toISOString().split('T')[0];
+    const monthAgo  = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+    document.getElementById('start-date').value = monthAgo;
+    document.getElementById('end-date').value   = today;
+
+    let allSales = [], allProducts = [], allCustomers = [], allStock = [];
+    let dailyChart = null;
+    let currentTab = 'vendas';
+    let currentExportData = null;
+
+    function switchTab(name) {
+        currentTab = name;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-'+name).classList.add('active');
+        document.getElementById('panel-'+name).classList.add('active');
+    }
+
+    function br(v) { return `R$ ${Number(v||0).toFixed(2)}`; }
+    function pct(v) { return `${Number(v||0).toFixed(1)}%`; }
+
+    async function loadAll() {
+        const start = document.getElementById('start-date').value;
+        const end   = document.getElementById('end-date').value;
+        const qs    = `start_date=${start}&end_date=${end}`;
+        await Promise.all([loadVendas(qs), loadProdutos(qs), loadClientes(qs), loadEstoque()]);
+    }
+
+    /* ---------- VENDAS ---------- */
+    async function loadVendas(qs) {
+        const [sumRes, listRes] = await Promise.all([
+            fetch(`/api/reports/summary?${qs}`),
+            fetch(`/api/reports/sales?${qs}`)
+        ]);
+        const sum  = await sumRes.json();
+        allSales   = await listRes.json();
+
+        document.getElementById('kpi-revenue').textContent  = br(sum.total_revenue);
+        document.getElementById('kpi-orders').textContent   = sum.total_orders;
+        document.getElementById('kpi-ticket').textContent   = br(sum.ticket_medio);
+        document.getElementById('kpi-discount').textContent = br(sum.total_discount);
+        document.getElementById('kpi-freight').textContent  = br(sum.total_freight);
+
+        // Barras de pagamento
+        const maxPay = Math.max(...(sum.payment_methods||[]).map(p=>p.total), 1);
+        document.getElementById('payment-bars').innerHTML = (sum.payment_methods||[]).map(p => `
+            <div style="margin-bottom:0.75rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:3px;">
+                    <span>${p.metodo}</span><span style="font-weight:700;">${br(p.total)}</span>
+                </div>
+                <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.06);">
+                    <div style="height:100%;border-radius:4px;background:var(--primary);width:${(p.total/maxPay*100).toFixed(1)}%;transition:width 0.4s;"></div>
+                </div>
+            </div>`).join('') || '<p style="color:var(--text-muted);font-size:0.85rem;">Sem dados.</p>';
+
+        // Barras logística
+        const total_log = (sum.delivery_count||0) + (sum.pickup_count||0) || 1;
+        document.getElementById('delivery-bars').innerHTML = `
+            <div style="margin-bottom:0.75rem;">
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:3px;">
+                    <span>🏪 Retirada</span><span style="font-weight:700;">${sum.pickup_count||0} pedidos</span>
+                </div>
+                <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.06);">
+                    <div style="height:100%;border-radius:4px;background:#10b981;width:${((sum.pickup_count||0)/total_log*100).toFixed(1)}%;"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:3px;">
+                    <span>🛵 Entrega</span><span style="font-weight:700;">${sum.delivery_count||0} pedidos</span>
+                </div>
+                <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.06);">
+                    <div style="height:100%;border-radius:4px;background:#f59e0b;width:${((sum.delivery_count||0)/total_log*100).toFixed(1)}%;"></div>
+                </div>
+            </div>`;
+
+        // Gráfico diário
+        const daily = sum.daily || [];
+        if (dailyChart) dailyChart.destroy();
+        const ctx = document.getElementById('daily-chart').getContext('2d');
+        dailyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: daily.map(d=>d.dia),
+                datasets: [{ label: 'Faturamento', data: daily.map(d=>d.total),
+                    backgroundColor: 'rgba(99,102,241,0.5)', borderColor: '#6366f1',
+                    borderWidth: 2, borderRadius: 6 }]
+            },
+            options: { responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{display:false}},
+                scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#94a3b8',callback:v=>'R$'+v}},
+                        x:{grid:{display:false},ticks:{color:'#94a3b8'}}} }
+        });
+
+        // Tabela
+        let total = 0;
+        document.getElementById('sales-tbody').innerHTML = allSales.length
+            ? allSales.map(s => {
+                total += s.total;
+                const sc = s.status==='completed'?'#10b981':(s.status==='pending'?'#ffbf00':'#ef4444');
+                const label = s.status==='completed'?'PAGO':(s.status==='pending'?'PENDENTE':'CANCELADO');
+                const entrega = s.logistica === 'delivery' ? '🛵 Entrega' : '🏪 Retirada';
+                return `<tr>
+                    <td style="color:var(--text-muted);">#${s.id}</td>
+                    <td>${s.data}</td>
+                    <td style="font-weight:600;">${s.cliente||'—'}</td>
+                    <td>${s.metodo||'—'}</td>
+                    <td style="font-size:0.8rem;">${entrega}</td>
+                    <td><span style="color:${sc};font-weight:700;font-size:0.75rem;">${label}</span></td>
+                    <td style="text-align:right;font-weight:700;">${br(s.total)}</td>
+                </tr>`;
+              }).join('')
+            : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhuma venda no período.</td></tr>';
+        document.getElementById('sales-total').textContent = br(total);
+        currentExportData = allSales;
+    }
+
+    /* ---------- PRODUTOS ---------- */
+    async function loadProdutos(qs) {
+        const res = await fetch(`/api/reports/products?${qs}`);
+        allProducts = await res.json();
+        document.getElementById('products-tbody').innerHTML = allProducts.length
+            ? allProducts.map((p,i) => `<tr>
+                <td style="color:var(--text-muted);font-weight:700;">${i+1}</td>
+                <td style="font-weight:600;">${p.nome}</td>
+                <td>${p.tamanho||'—'}</td>
+                <td style="text-align:right;font-weight:700;">${p.qtd}</td>
+                <td style="text-align:right;">${br(p.receita)}</td>
+                <td style="text-align:right;color:var(--text-muted);">${br(p.custo)}</td>
+                <td style="text-align:right;color:#10b981;font-weight:700;">${br(p.lucro)}</td>
+                <td style="text-align:right;">
+                    <span style="color:${p.margem>=40?'#10b981':p.margem>=20?'#f59e0b':'#ef4444'};font-weight:700;">${pct(p.margem)}</span>
+                </td>
+              </tr>`).join('')
+            : '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum produto vendido no período.</td></tr>';
+    }
+
+    /* ---------- CLIENTES ---------- */
+    async function loadClientes(qs) {
+        const res = await fetch(`/api/reports/customers?${qs}`);
+        allCustomers = await res.json();
+        const medals = ['🥇','🥈','🥉'];
+        document.getElementById('customers-tbody').innerHTML = allCustomers.length
+            ? allCustomers.map((c,i) => `<tr>
+                <td style="font-size:1.1rem;">${medals[i]||`#${i+1}`}</td>
+                <td style="font-weight:700;">${c.nome}</td>
+                <td style="color:var(--text-muted);">${c.telefone||'—'}</td>
+                <td style="text-align:right;font-weight:700;">${c.pedidos}</td>
+                <td style="text-align:right;">${br(c.ticket_medio)}</td>
+                <td style="text-align:right;font-weight:800;color:var(--accent);">${br(c.total)}</td>
+                <td style="color:var(--text-muted);font-size:0.8rem;">${c.ultima_compra}</td>
+              </tr>`).join('')
+            : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente identificado no período.</td></tr>';
+    }
+
+    /* ---------- ESTOQUE ---------- */
+    async function loadEstoque() {
+        const res = await fetch('/api/reports/stock');
+        allStock = await res.json();
+        const total = allStock.reduce((s,v)=>s+v.estoque,0);
+        const valor = allStock.reduce((s,v)=>s+v.valor_estoque,0);
+        const zero  = allStock.filter(v=>v.status==='esgotado').length;
+        const baixo = allStock.filter(v=>v.status==='baixo').length;
+        document.getElementById('stk-total').textContent = total;
+        document.getElementById('stk-value').textContent = br(valor);
+        document.getElementById('stk-zero').textContent  = zero;
+        document.getElementById('stk-low').textContent   = baixo;
+        renderStock(allStock);
+    }
+
+    function renderStock(data) {
+        document.getElementById('stock-tbody').innerHTML = data.length
+            ? data.map(v => {
+                const badge = v.status==='esgotado'
+                    ? `<span class="badge-esgot">ESGOTADO</span>`
+                    : v.status==='baixo'
+                    ? `<span class="badge-baixo">BAIXO</span>`
+                    : `<span class="badge-ok">OK</span>`;
+                return `<tr>
+                    <td style="font-weight:600;">${v.produto}</td>
+                    <td style="color:var(--text-muted);font-size:0.8rem;">${v.categoria}</td>
+                    <td>${v.tamanho||'—'}</td>
+                    <td style="font-size:0.8rem;">${v.cor||'—'}</td>
+                    <td style="text-align:right;font-weight:800;color:${v.estoque===0?'var(--secondary)':v.estoque<=3?'#f59e0b':'white'};">${v.estoque}</td>
+                    <td style="text-align:right;">${br(v.preco)}</td>
+                    <td style="text-align:right;color:var(--text-muted);">${br(v.custo)}</td>
+                    <td style="text-align:right;font-weight:700;color:var(--accent);">${br(v.valor_estoque)}</td>
+                    <td>${badge}</td>
+                </tr>`;
+              }).join('')
+            : '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum produto encontrado.</td></tr>';
+    }
+
+    function filterStock() {
+        const f = document.getElementById('stock-filter').value;
+        const q = document.getElementById('stock-search').value.toLowerCase();
+        const filtered = allStock.filter(v => {
+            const matchF = f==='all' || v.status===f;
+            const matchQ = !q || v.produto.toLowerCase().includes(q) || (v.categoria||'').toLowerCase().includes(q);
+            return matchF && matchQ;
+        });
+        renderStock(filtered);
+    }
+
+    /* ---------- EXPORT ---------- */
+    function exportCSV() {
+        let rows, headers, filename;
+        if (currentTab === 'vendas') {
+            headers = ['ID','Data','Cliente','Método','Logística','Status','Total'];
+            rows = allSales.map(s=>[s.id,s.data,s.cliente,s.metodo,s.logistica,s.status,s.total.toFixed(2)]);
+            filename = 'relatorio_vendas';
+        } else if (currentTab === 'produtos') {
+            headers = ['Produto','Tamanho','Qtd Vendida','Receita','Custo','Lucro','Margem%'];
+            rows = allProducts.map(p=>[p.nome,p.tamanho,p.qtd,p.receita.toFixed(2),p.custo.toFixed(2),p.lucro.toFixed(2),p.margem.toFixed(1)]);
+            filename = 'relatorio_produtos';
+        } else if (currentTab === 'clientes') {
+            headers = ['Pos','Nome','Telefone','Pedidos','Ticket Médio','Total Gasto','Última Compra'];
+            rows = allCustomers.map((c,i)=>[i+1,c.nome,c.telefone,c.pedidos,c.ticket_medio.toFixed(2),c.total.toFixed(2),c.ultima_compra]);
+            filename = 'relatorio_clientes';
+        } else {
+            headers = ['Produto','Categoria','Tamanho','Cor','Estoque','Preço','Custo','Valor Estoque','Status'];
+            rows = allStock.map(v=>[v.produto,v.categoria,v.tamanho,v.cor,v.estoque,v.preco.toFixed(2),v.custo.toFixed(2),v.valor_estoque.toFixed(2),v.status]);
+            filename = 'relatorio_estoque';
+        }
+        if (!rows || rows.length === 0) { alert('Filtre os dados antes de exportar.'); return; }
+        const csv = [headers, ...rows].map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+        const a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+        a.download = `${filename}_${document.getElementById('start-date').value}.csv`;
+        a.click();
+    }
+
+    loadAll();
+</script>
+{% endblock %}

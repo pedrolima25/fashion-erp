@@ -4,8 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Master Admin | Fashion ERP</title>
+    <meta name="csrf-token" content="{{ request.session.get('csrf_token', '') }}">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        window.CSRF_TOKEN = "{{ request.session.get('csrf_token', '') }}";
+        (function () {
+            const originalFetch = window.fetch.bind(window);
+            const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+            window.fetch = function (input, init) {
+                init = init ? { ...init } : {};
+                const method = (init.method || (input && input.method) || 'GET').toUpperCase();
+
+                try {
+                    const rawUrl = typeof input === 'string' ? input : input.url;
+                    const url = new URL(rawUrl, window.location.origin);
+                    const shouldAttach = url.origin === window.location.origin
+                        && url.pathname.startsWith('/api/')
+                        && unsafeMethods.has(method);
+
+                    if (shouldAttach && window.CSRF_TOKEN) {
+                        const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+                        headers.set('X-CSRF-Token', window.CSRF_TOKEN);
+                        init.headers = headers;
+                    }
+                } catch (e) {}
+
+                return originalFetch(input, init);
+            };
+        })();
+    </script>
 </head>
 <body style="padding-top: 2rem;">
     <div class="main-layout" style="margin-left: 0; max-width: 1200px; margin: 0 auto;">

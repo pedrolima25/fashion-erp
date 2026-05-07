@@ -1,6 +1,6 @@
 {% extends "master.html" %}
 
-{% block title %}Clientes | Fashion ERP{% endblock %}
+{% block title %}Clientes | Fashion ERP Pro{% endblock %}
 
 {% block header_title %}Gestão de Clientes{% endblock %}
 
@@ -12,44 +12,120 @@
             <p style="color: var(--text-muted); font-size: 0.85rem;">Gerencie informações e histórico de compras.</p>
         </div>
         <div style="display: flex; gap: 1rem; flex: 1; max-width: 500px;">
-            <input type="text" id="search-client" placeholder="Buscar por nome ou celular..." style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
-            <button class="btn btn-primary" onclick="alert('Funcionalidade em desenvolvimento')"><i class="fas fa-plus"></i> Novo</button>
+            <input type="text" id="search-client" onkeyup="filterClients()" placeholder="Buscar por nome ou celular..." class="glass" style="flex: 1; padding: 0.75rem; border-radius: 8px;">
         </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Celular / WhatsApp</th>
-                <th>E-mail</th>
-                <th>Total Comprado</th>
-                <th>Última Compra</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="client-list">
-            <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                    Buscando clientes no banco...
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Celular / WhatsApp</th>
+                    <th>E-mail</th>
+                    <th>Total Comprado</th>
+                    <th>Última Compra</th>
+                    <th style="text-align: center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="client-list">
+                <tr><td colspan="6" style="text-align: center; padding: 3rem;">Carregando clientes...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Histórico -->
+<div id="history-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="glass" style="max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem; position: relative;">
+        <button onclick="closeModal()" style="position: absolute; right: 1.5rem; top: 1.5rem; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem;">
+            <i class="ph ph-x"></i>
+        </button>
+        <h3 id="modal-client-name" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">Histórico de Compras</h3>
+        <div id="history-content">
+            <!-- Conteúdo dinâmico -->
+        </div>
+    </div>
 </div>
 
 <script>
+    let allClients = [];
+
     async function loadClients() {
-        // Placeholder até integrar a API em main.py
-        const container = document.getElementById('client-list');
-        container.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">
-                    Nenhum cliente cadastrado ainda.
-                </td>
-            </tr>
-        `;
+        try {
+            const res = await fetch('/api/customers');
+            allClients = await res.json();
+            renderClients(allClients);
+        } catch (e) {
+            console.error(e);
+        }
     }
+
+    function renderClients(clients) {
+        const container = document.getElementById('client-list');
+        let html = '';
+        clients.forEach(c => {
+            html += `
+                <tr>
+                    <td style="font-weight: 600;">${c.name}</td>
+                    <td>${c.phone}</td>
+                    <td style="color: var(--text-muted);">${c.email}</td>
+                    <td style="font-weight: 700; color: var(--primary);">R$ ${c.total_purchased.toFixed(2)}</td>
+                    <td>${c.last_purchase}</td>
+                    <td style="text-align: center;">
+                        <button onclick="viewHistory(${c.id}, '${c.name}')" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.75rem;">
+                            <i class="ph ph-clock-counter-clockwise"></i> Histórico
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        container.innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Nenhum cliente encontrado.</td></tr>';
+    }
+
+    function filterClients() {
+        const term = document.getElementById('search-client').value.toLowerCase();
+        const filtered = allClients.filter(c => 
+            c.name.toLowerCase().includes(term) || c.phone.includes(term)
+        );
+        renderClients(filtered);
+    }
+
+    async function viewHistory(id, name) {
+        const modal = document.getElementById('history-modal');
+        const content = document.getElementById('history-content');
+        document.getElementById('modal-client-name').innerText = `Compras de ${name}`;
+        
+        content.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando histórico...</p>';
+        modal.style.display = 'flex';
+        
+        try {
+            const res = await fetch(`/api/customers/${id}/history`);
+            const history = await res.json();
+            
+            let hHtml = '<table style="width: 100%; border-spacing: 0 8px; border-collapse: separate;">';
+            history.forEach(h => {
+                const color = h.status === 'completed' || h.status === 'paid' ? '#10b981' : (h.status === 'pending' ? '#ffbf00' : '#ef4444');
+                hHtml += `
+                    <tr style="background: rgba(255,255,255,0.02);">
+                        <td style="padding: 0.75rem;">#${h.id}</td>
+                        <td>${h.date}</td>
+                        <td style="font-weight: 700;">R$ ${h.total.toFixed(2)}</td>
+                        <td><span style="color: ${color}; font-size: 0.7rem; font-weight: 800;">${h.status.toUpperCase()}</span></td>
+                    </tr>
+                `;
+            });
+            hHtml += '</table>';
+            content.innerHTML = hHtml || '<p style="text-align: center; padding: 2rem; color: var(--text-muted);">Sem compras registradas.</p>';
+        } catch (e) {
+            content.innerHTML = '<p>Erro ao carregar histórico.</p>';
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('history-modal').style.display = 'none';
+    }
+
     loadClients();
 </script>
 {% endblock %}

@@ -140,6 +140,18 @@ class Neighborhood(Base):
     
     company = relationship("Company")
 
+class DeliveryDriver(Base):
+    __tablename__ = "delivery_drivers"
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    name = Column(String, index=True)
+    phone = Column(String, index=True)
+    vehicle = Column(String, nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=get_manaus_time)
+
+    company = relationship("Company")
+
 class Customer(Base):
     __tablename__ = "customers"
     __table_args__ = (UniqueConstraint('company_id', 'phone', name='ux_customer_company_phone'),)
@@ -161,6 +173,13 @@ class Sale(Base):
     delivery_type = Column(String, nullable=True) # pickup, delivery
     delivery_fee = Column(Float, default=0.0)
     delivery_address = Column(Text, nullable=True)
+    delivery_reference = Column(Text, nullable=True)
+    delivery_location_link = Column(Text, nullable=True)
+    delivery_driver_id = Column(Integer, ForeignKey("delivery_drivers.id"), nullable=True)
+    delivery_status = Column(String, default="waiting") # waiting, assigned, out_for_delivery, delivered, failed
+    delivery_assigned_at = Column(DateTime(timezone=True), nullable=True)
+    delivery_dispatched_at = Column(DateTime(timezone=True), nullable=True)
+    delivery_completed_at = Column(DateTime(timezone=True), nullable=True)
     payment_method = Column(String, default="PIX") # PIX, Credit, Debit, Cash
     status = Column(String, default="pending") # pending, paid, completed, cancelled
     date = Column(DateTime(timezone=True), default=get_manaus_time)
@@ -168,6 +187,7 @@ class Sale(Base):
     company = relationship("Company", back_populates="sales")
     customer = relationship("Customer")
     items = relationship("SaleItem", back_populates="sale")
+    delivery_driver = relationship("DeliveryDriver")
 
 class SaleItem(Base):
     __tablename__ = "sale_items"
@@ -180,6 +200,8 @@ class SaleItem(Base):
     cost_price = Column(Float, default=0.0)
     
     sale = relationship("Sale", back_populates="items")
+    product = relationship("Product")
+    variation = relationship("ProductVariation")
 
 class Transaction(Base):
     """Fluxo de Caixa (Financeiro)"""
@@ -304,6 +326,20 @@ def run_migrations():
             conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_fee FLOAT DEFAULT 0.0"))
         if 'delivery_address' not in cols_sales:
             conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_address TEXT"))
+        if 'delivery_reference' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_reference TEXT"))
+        if 'delivery_location_link' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_location_link TEXT"))
+        if 'delivery_driver_id' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_driver_id INTEGER"))
+        if 'delivery_status' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_status VARCHAR DEFAULT 'waiting'"))
+        if 'delivery_assigned_at' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_assigned_at DATETIME"))
+        if 'delivery_dispatched_at' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_dispatched_at DATETIME"))
+        if 'delivery_completed_at' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_completed_at DATETIME"))
 
         # Colunas em subscriptions
         cols_sub = [c['name'] for c in inspector.get_columns('subscriptions')]

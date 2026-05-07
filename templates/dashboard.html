@@ -4,6 +4,10 @@
 
 {% block header_title %}Painel de Controle{% endblock %}
 
+{% block extra_head %}
+<!-- O Chart.js será carregado no rodapé para maior estabilidade -->
+{% endblock %}
+
 {% block content %}
 <!-- Modal de Confirmação Customizado (Anti-Bloqueio) -->
 <div id="custom-confirm-modal" style="display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); align-items: center; justify-content: center; padding: 2rem;">
@@ -17,6 +21,45 @@
             <button id="confirm-btn-cancel" class="btn btn-secondary" style="flex: 1; justify-content: center;">Não, Voltar</button>
             <button id="confirm-btn-ok" class="btn btn-primary" style="flex: 1; justify-content: center; background: #10b981;">Sim, Confirmar</button>
         </div>
+    </div>
+</div>
+
+<!-- Modal: Fechar Caixa -->
+<div id="close-cash-modal" style="display:none; position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:380px; width:100%; padding:2rem; border:2px solid var(--secondary); border-radius:20px; box-shadow:0 0 30px rgba(244,63,94,0.3); text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(244,63,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem;">
+            <i class="ph ph-lock" style="color:var(--secondary); font-size:2rem;"></i>
+        </div>
+        <h3 style="margin-bottom:0.5rem;">Fechar Caixa</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Tem certeza? As vendas do dia serão totalizadas.</p>
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="document.getElementById('close-cash-modal').style.display='none'" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmCloseCash()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--secondary);">
+                <i class="ph ph-lock"></i> Fechar
+            </button>
+        </div>
+        <div id="close-cash-result" style="display:none; margin-top:1rem; padding:0.75rem; border-radius:8px; font-size:0.9rem;"></div>
+    </div>
+</div>
+
+<!-- Modal: Abrir Caixa -->
+<div id="open-cash-modal" style="display:none; position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:380px; width:100%; padding:2rem; border:2px solid var(--accent); border-radius:20px; box-shadow:0 0 30px rgba(16,185,129,0.3); text-align:center;">
+        <div style="width:60px; height:60px; background:rgba(16,185,129,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem;">
+            <i class="ph ph-lock-open" style="color:var(--accent); font-size:2rem;"></i>
+        </div>
+        <h3 style="margin-bottom:0.5rem;">Abrir Caixa</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Informe o saldo inicial em dinheiro.</p>
+        <input id="cash-open-amount" type="number" min="0" step="0.01" value="0" placeholder="R$ 0,00"
+               style="width:100%; padding:0.875rem; border-radius:10px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:1.1rem; text-align:center; margin-bottom:1.25rem;"
+               onkeydown="if(event.key==='Enter') confirmOpenCash()">
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="closeOpenCashModal()" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmOpenCash()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--accent);">
+                <i class="ph ph-lock-open"></i> Abrir
+            </button>
+        </div>
+        <div id="cash-open-error" style="display:none; color:var(--secondary); margin-top:1rem; font-size:0.85rem;"></div>
     </div>
 </div>
 
@@ -68,6 +111,45 @@
     </div>
 </div>
 
+<!-- CONTROLE DE CAIXA -->
+<div id="cash-banner" class="glass" style="display: none; padding: 1rem 1.5rem; margin-bottom: 2rem; border: 1px solid var(--primary); background: rgba(99, 102, 241, 0.05); align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 45px; height: 45px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center;">
+            <i class="ph ph-wallet" style="color: white; font-size: 1.5rem;"></i>
+        </div>
+        <div>
+            <div style="font-weight: 700; font-size: 1rem;">Caixa Aberto</div>
+            <div id="cash-info" style="font-size: 0.85rem; color: var(--text-muted);">Iniciado às --:-- com R$ 0,00</div>
+        </div>
+    </div>
+    <button onclick="closeCash()" class="btn btn-secondary" style="border-color: var(--secondary); color: var(--secondary);">
+        <i class="ph ph-lock"></i> Fechar Caixa
+    </button>
+</div>
+
+<div id="no-cash-banner" class="glass" style="display: none; padding: 1rem 1.5rem; margin-bottom: 2rem; border: 1px solid var(--secondary); background: rgba(244, 63, 94, 0.05); align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 45px; height: 45px; border-radius: 50%; background: var(--secondary); display: flex; align-items: center; justify-content: center;">
+            <i class="ph ph-lock-key" style="color: white; font-size: 1.5rem;"></i>
+        </div>
+        <div>
+            <div style="font-weight: 700; font-size: 1rem;">Caixa Fechado</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Abra o caixa para iniciar as operações do dia.</div>
+        </div>
+    </div>
+    <button onclick="openCashModal()" class="btn btn-primary" style="background: var(--accent);">
+        <i class="ph ph-lock-open"></i> Abrir Caixa
+    </button>
+</div>
+
+<!-- GRÁFICO DE VENDAS -->
+<div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="ph ph-chart-line-up"></i> Faturamento (Últimos 7 Dias)</h3>
+    <div style="height: 250px; width: 100%;">
+        <canvas id="salesChart"></canvas>
+    </div>
+</div>
+
 <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
     <div class="glass" style="padding: 1.5rem;">
         <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="ph ph-clock-counter-clockwise"></i> Últimos Pedidos</h3>
@@ -78,13 +160,14 @@
                         <th>Pedido</th>
                         <th>Hora</th>
                         <th>Cliente</th>
+                        <th>Entrega</th>
                         <th>Total</th>
                         <th>Status</th>
                         <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="vendas-recentes">
-                    <tr><td colspan="6" style="text-align: center; padding: 3rem;">Iniciando sistema...</td></tr>
+                    <tr><td colspan="7" style="text-align: center; padding: 3rem;">Iniciando sistema...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -102,12 +185,107 @@
 </div>
 
 <script>
-    // --- BLOQUEIO DE DUPLICIDADE (SCRIPT GUARD) ---
-    if (window.DASHBOARD_INITIALIZED_V5) {
-        console.warn("⚠️ Dashboard já inicializado. Ignorando duplicata.");
-    } else {
+    // --- FUNÇÕES GLOBAIS DE CAIXA ---
+    function parseCashAmount(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return 0;
+        const normalized = raw.includes(',')
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw;
+        const amount = Number.parseFloat(normalized);
+        return Number.isFinite(amount) ? amount : 0;
+    }
+
+    async function readApiJson(res, fallbackMessage) {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+            throw new Error(data.error || fallbackMessage || `Erro ${res.status}`);
+        }
+        return data;
+    }
+
+    async function refreshCashArea() {
+        if (typeof window.checkCashStatus === 'function') await window.checkCashStatus();
+        if (typeof window.loadDashboardStats === 'function') await window.loadDashboardStats();
+    }
+
+    if (!window.DASHBOARD_INITIALIZED_V5) {
         window.DASHBOARD_INITIALIZED_V5 = true;
-        console.log("🚀 Inicializando Dashboard Fashion ERP V5...");
+
+        // --- FUNÇÕES GLOBAIS DE CAIXA ---
+        window.openCashModal = function() {
+            const modal = document.getElementById('open-cash-modal');
+            const input = document.getElementById('cash-open-amount');
+            const errEl = document.getElementById('cash-open-error');
+            errEl.style.display = 'none';
+            input.value = '0';
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 100);
+        };
+
+        window.closeOpenCashModal = function() {
+            document.getElementById('open-cash-modal').style.display = 'none';
+        };
+
+        window.confirmOpenCash = async function() {
+            const input = document.getElementById('cash-open-amount');
+            const errEl = document.getElementById('cash-open-error');
+            const amount = parseFloat(input.value) || 0;
+            errEl.style.display = 'none';
+            try {
+                const res = await apiFetch('/api/cash/open', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({amount})
+                });
+                const data = await readApiJson(res, 'Erro ao abrir caixa.');
+                window.closeOpenCashModal();
+                await refreshCashArea();
+                alert('Caixa aberto com sucesso!');
+            } catch (e) {
+                errEl.textContent = e.message || 'Erro ao abrir caixa.';
+                errEl.style.display = 'block';
+            }
+        };
+
+        window.closeCash = function() {
+            const modal = document.getElementById('close-cash-modal');
+            const result = document.getElementById('close-cash-result');
+            result.style.display = 'none';
+            modal.style.display = 'flex';
+        };
+
+        window.confirmCloseCash = async function() {
+            const result = document.getElementById('close-cash-result');
+            result.style.display = 'none';
+            try {
+                const res = await apiFetch('/api/cash/close', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    result.style.background = 'rgba(16,185,129,0.15)';
+                    result.style.color = '#10b981';
+                    result.style.border = '1px solid rgba(16,185,129,0.3)';
+                    result.textContent = `Caixa fechado! Saldo Final: R$ ${Number(data.final_balance || 0).toFixed(2)}`;
+                    result.style.display = 'block';
+                    setTimeout(async () => {
+                        document.getElementById('close-cash-modal').style.display = 'none';
+                        await refreshCashArea();
+                    }, 1800);
+                } else {
+                    result.style.background = 'rgba(244,63,94,0.15)';
+                    result.style.color = 'var(--secondary)';
+                    result.style.border = '1px solid rgba(244,63,94,0.3)';
+                    result.textContent = data.error || 'Não foi possível fechar o caixa.';
+                    result.style.display = 'block';
+                }
+            } catch (e) {
+                result.style.background = 'rgba(244,63,94,0.15)';
+                result.style.color = 'var(--secondary)';
+                result.style.border = '1px solid rgba(244,63,94,0.3)';
+                result.textContent = e.message || 'Erro ao fechar caixa.';
+                result.style.display = 'block';
+            }
+        };
 
         let lastSaleId = 0;
         let pendingCount = 0;
@@ -146,7 +324,7 @@
             const endpoint = currentActionType === 'confirm' ? 'confirm' : 'cancel';
             
             try {
-                const res = await fetch(`/api/sales/${currentActionId}/${endpoint}`, { method: 'POST' });
+                const res = await apiFetch(`/api/sales/${currentActionId}/${endpoint}`, { method: 'POST' });
                 const data = await res.json();
                 if (res.ok) {
                     showToast(currentActionType === 'confirm' ? 'Pagamento Confirmado!' : 'Pedido Cancelado');
@@ -184,6 +362,16 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[ch]));
+        }
+
         async function loadStats() {
             try {
                 const res = await fetch('/api/dashboard/stats');
@@ -205,6 +393,23 @@
                 data.vendas_recentes.forEach(v => {
                     let stHtml = '';
                     let acHtml = '';
+                    const isDelivery = v.logistica === 'delivery';
+                    const cliente = escapeHtml(v.cliente || 'Final Consumidor');
+                    const telefone = escapeHtml(v.telefone || '');
+                    const endereco = escapeHtml(v.endereco || '');
+                    const referencia = escapeHtml(v.referencia || '');
+                    const localizacao = escapeHtml(v.localizacao || '');
+                    const entregaLabel = isDelivery ? 'Entrega' : 'Retirada';
+                    const entregaColor = isDelivery ? '#f59e0b' : '#10b981';
+                    const locationHtml = v.localizacao
+                        ? (/^https?:\/\//i.test(v.localizacao)
+                            ? `<a href="${localizacao}" target="_blank" rel="noopener" style="color: var(--primary-light); font-weight: 700;">Abrir localização</a>`
+                            : localizacao)
+                        : '-';
+                    const itensHtml = (v.itens || []).map(item => {
+                        const detalhes = [item.tamanho].filter(Boolean).map(escapeHtml).join(' / ');
+                        return `<div>${escapeHtml(String(item.qtd || 1))}x ${escapeHtml(item.nome || '')}${detalhes ? ` (${detalhes})` : ''} — R$ ${Number(item.preco || 0).toFixed(2)}</div>`;
+                    }).join('') || '<div style="color:var(--text-muted)">—</div>';
 
                     if (v.status === 'pending') {
                         stHtml = `<span style="background: #ffbf00; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 800;">PENDENTE</span>`;
@@ -215,6 +420,9 @@
                                 </button>
                                 <button class="action-btn" data-id="${v.id}" data-action="cancel" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,60,60,0.2); padding: 8px; border-radius: 8px; cursor: pointer;">
                                     <i class="ph-bold ph-x"></i>
+                                </button>
+                                <button onclick="window.open('/api/sales/${v.id}/receipt', '_blank')" style="background: rgba(255,255,255,0.05); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); padding: 8px; border-radius: 8px; cursor: pointer;">
+                                    <i class="ph-bold ph-printer"></i>
                                 </button>
                             </div>
                         `;
@@ -228,14 +436,41 @@
                         <tr style="background: rgba(255,255,255,0.02);">
                             <td style="padding: 1rem; font-size: 0.75rem; color: var(--text-muted);">#${v.id}</td>
                             <td style="padding: 1rem; font-size: 0.8rem;">${v.data}</td>
-                            <td style="padding: 1rem; font-size: 0.85rem; font-weight: 600;">${v.cliente}</td>
+                            <td style="padding: 1rem; font-size: 0.85rem; font-weight: 600;">
+                                <div>${cliente}</div>
+                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${telefone || '-'}</div>
+                            </td>
+                            <td style="padding: 1rem;">
+                                <span style="background: ${entregaColor}22; color: ${entregaColor}; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">${entregaLabel}</span>
+                            </td>
                             <td style="padding: 1rem; font-weight: 700;">R$ ${v.total.toFixed(2)}</td>
                             <td style="padding: 1rem;">${stHtml}</td>
                             <td style="padding: 1rem; text-align: center;">${acHtml}</td>
                         </tr>
+                        <tr>
+                            <td colspan="7" style="padding: 0 1rem 1rem 1rem;">
+                                <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 0.85rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; font-size: 0.78rem; color: var(--text-muted);">
+                                    <div>
+                                        <strong style="color: white;">Dados da venda</strong>
+                                        <div>Pagamento: ${escapeHtml(v.pagamento || '-')}</div>
+                                        <div>Frete: R$ ${Number(v.frete || 0).toFixed(2)}</div>
+                                    </div>
+                                    <div>
+                                        <strong style="color: white;">${entregaLabel}</strong>
+                                        <div>Endereço: ${isDelivery ? (endereco || '-') : 'Retirada na loja'}</div>
+                                        <div>Referência: ${isDelivery ? (referencia || '-') : '-'}</div>
+                                        <div>Localização: ${isDelivery ? locationHtml : '-'}</div>
+                                    </div>
+                                    <div>
+                                        <strong style="color: white;">Itens</strong>
+                                        ${itensHtml}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     `;
                 });
-                document.getElementById('vendas-recentes').innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Sem vendas hoje.</td></tr>';
+                document.getElementById('vendas-recentes').innerHTML = html || '<tr><td colspan="7" style="text-align: center; padding: 2rem;">Sem vendas hoje.</td></tr>';
 
                 // Status Bot
                 const wStatus = await (await fetch('/api/whatsapp/status')).json();
@@ -248,8 +483,83 @@
             }
         }
 
+        // Inicialização Segura
+        window.loadDashboardStats = loadStats;
+        checkCashStatus();
         loadStats();
+        
+        // Carrega o gráfico após um pequeno delay para garantir que a lib carregou
+        setTimeout(loadChart, 500);
+
         setInterval(loadStats, 6000);
+
+        async function loadChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn("Chart.js ainda não carregou. Tentando novamente...");
+                setTimeout(loadChart, 1000);
+                return;
+            }
+            try {
+                const res = await fetch('/api/stats/sales-chart');
+                const data = await res.json();
+                
+                const ctx = document.getElementById('salesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.label),
+                        datasets: [{
+                            label: 'Vendas (R$)',
+                            data: data.map(d => d.value),
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#6366f1'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) { console.error("Erro ao carregar gráfico:", e); }
+        }
+
+        async function checkCashStatus() {
+            try {
+                const res = await fetch('/api/cash/status');
+                const data = await res.json();
+                if (data.is_open) {
+                    document.getElementById('cash-banner').style.display = 'flex';
+                    document.getElementById('no-cash-banner').style.display = 'none';
+                    document.getElementById('cash-info').innerText = `Iniciado às ${data.opened_at} com R$ ${data.opening_balance.toFixed(2)}`;
+                } else {
+                    document.getElementById('cash-banner').style.display = 'none';
+                    document.getElementById('no-cash-banner').style.display = 'flex';
+                }
+            } catch (e) {}
+        }
+        window.checkCashStatus = checkCashStatus;
     }
 </script>
+
+<!-- Carregamento de segurança no final da página -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js?v=1"></script>
 {% endblock %}
