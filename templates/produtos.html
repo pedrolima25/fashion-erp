@@ -203,10 +203,13 @@
                             <i class="fab fa-whatsapp"></i> ${p.show_on_whatsapp ? 'Visível' : 'Oculto'}
                         </span>
                         <div style="display: flex; gap: 0.5rem;">
-                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="editProduct(${p.id})">
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="editProduct(${p.id})" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: var(--secondary);" onclick="deleteProduct(${p.id})">
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-color: #6366f1; color: #6366f1;" onclick="printLabels(${p.id})" title="Gerar Etiqueta">
+                                <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; color: var(--secondary);" onclick="deleteProduct(${p.id})" title="Excluir">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -357,6 +360,13 @@
     function closeProductModal() {
         document.getElementById('product-modal').style.display = 'none';
         document.getElementById('modal-overlay').style.display = 'none';
+    }
+
+    function printLabels(productId) {
+        const qty = prompt("Quantas etiquetas deseja imprimir?", "1");
+        if (qty && !isNaN(qty)) {
+            window.open(`/api/products/labels?product_id=${productId}&qty=${qty}`, '_blank');
+        }
     }
 
     loadCategories();

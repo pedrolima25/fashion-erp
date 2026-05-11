@@ -80,6 +80,19 @@
         <div class="widget-value" id="val-vendas-hoje">R$ 0,00</div>
     </div>
 
+    <!-- ALERTAS DE ESTOQUE (NOVO FASE 2) -->
+    <div class="glass glass-card" id="card-low-stock" style="display: none; border-color: rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div class="widget-title" style="color: var(--secondary);">Estoque Baixo</div>
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(244, 63, 94, 0.1); display: flex; align-items: center; justify-content: center;">
+                <i class="ph ph-warning" style="color: var(--secondary); font-size: 1.25rem;"></i>
+            </div>
+        </div>
+        <div id="low-stock-list" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <!-- Itens injetados via JS -->
+        </div>
+    </div>
+
     <!-- Pedidos Pendentes -->
     <div class="glass glass-card" style="border: 1px solid #ffbf00; box-shadow: 0 0 15px rgba(255, 191, 0, 0.1);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -487,6 +500,7 @@
         window.loadDashboardStats = loadStats;
         checkCashStatus();
         loadStats();
+        loadLowStock();
         
         // Carrega o gráfico após um pequeno delay para garantir que a lib carregou
         setTimeout(loadChart, 500);
@@ -557,6 +571,24 @@
             } catch (e) {}
         }
         window.checkCashStatus = checkCashStatus;
+
+        async function loadLowStock() {
+            try {
+                const res = await fetch('/api/reports/low-stock');
+                const items = await res.json();
+                const card = document.getElementById('card-low-stock');
+                const list = document.getElementById('low-stock-list');
+                if (items.length > 0) {
+                    card.style.display = 'block';
+                    list.innerHTML = items.slice(0, 5).map(i => `
+                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.2rem;">
+                            <span>${i.product} (${i.size})</span>
+                            <span style="font-weight:bold; color:var(--secondary);">${i.stock} un</span>
+                        </div>
+                    `).join('');
+                } else { card.style.display = 'none'; }
+            } catch (e) {}
+        }
     }
 </script>
 

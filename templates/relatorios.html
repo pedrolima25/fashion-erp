@@ -35,6 +35,9 @@
     <button class="tab-btn" onclick="switchTab('estoque')" id="tab-estoque">
         <i class="ph ph-package"></i> Estoque
     </button>
+    <button class="tab-btn" onclick="switchTab('compras')" id="tab-compras">
+        <i class="ph ph-truck"></i> Compras
+    </button>
 </div>
 
 <style>
@@ -122,12 +125,36 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
         <div style="font-weight:700; margin-bottom:1rem; font-size:0.9rem;"><i class="ph ph-list" style="color:var(--primary);"></i> Lista de Vendas</div>
         <div style="overflow-x:auto;">
             <table>
-                <thead><tr><th>#</th><th>DATA</th><th>CLIENTE</th><th>MÉTODO</th><th>ENTREGA</th><th>STATUS</th><th style="text-align:right;">TOTAL</th></tr></thead>
-                <tbody id="sales-tbody"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
+                <thead><tr><th>#</th><th>DATA</th><th>CLIENTE</th><th>MÉTODO</th><th>ENTREGA</th><th>STATUS</th><th style="text-align:right;">TOTAL</th><th style="text-align:center;">AÇÃO</th></tr></thead>
+                <tbody id="sales-tbody"><tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Clique em Filtrar para carregar.</td></tr></tbody>
             </table>
         </div>
         <div style="margin-top:1rem; text-align:right; font-weight:800; font-size:1.1rem;">
             Total: <span id="sales-total" style="color:var(--accent);">R$ 0,00</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Trocas (Fase 2) -->
+<div id="exchange-modal" style="display:none; position:fixed; inset:0; z-index:10002; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:500px; width:100%; padding:2rem; border-radius:20px;">
+        <h3 style="margin-bottom:1rem;"><i class="ph ph-arrows-left-right"></i> Registrar Troca/Devolução</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.5rem;">Selecione os itens que o cliente está devolvendo.</p>
+        
+        <div id="exchange-items-list" style="max-height:250px; overflow-y:auto; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.75rem;">
+            <!-- Itens da venda injetados aqui -->
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:0.75rem; margin-bottom:0.4rem;">MOTIVO</label>
+            <textarea id="exch-reason" style="width:100%; padding:0.75rem; border-radius:8px; background:rgba(0,0,0,0.3); border:1px solid var(--glass-border); color:white; font-size:0.85rem;" rows="2" placeholder="Ex: Tamanho pequeno, defeito..."></textarea>
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="document.getElementById('exchange-modal').style.display='none'" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmExchange()" class="btn btn-primary" style="flex:1; justify-content:center; background:#f59e0b;">
+                Finalizar Devolução
+            </button>
         </div>
     </div>
 </div>
@@ -205,6 +232,61 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
     </div>
 </div>
 
+<!-- ===== ABA COMPRAS (NOVO FASE 2) ===== -->
+<div id="panel-compras" class="tab-panel">
+    <div class="glass" style="padding:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <div style="font-weight:700; font-size:0.9rem;"><i class="ph ph-truck" style="color:var(--primary);"></i> Histórico de Compras / Entradas</div>
+            <button onclick="openPurchaseModal()" class="btn btn-primary" style="font-size:0.8rem; padding:0.5rem 1rem;">
+                <i class="ph ph-plus"></i> Registrar Compra
+            </button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>#</th><th>DATA</th><th>FORNECEDOR</th><th>STATUS</th><th style="text-align:right;">TOTAL</th></tr></thead>
+                <tbody id="purchases-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Carregando histórico...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Compra (Entrada de Estoque) -->
+<div id="purchase-modal" style="display:none; position:fixed; inset:0; z-index:10003; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:600px; width:100%; padding:2rem; border-radius:20px; max-height:90vh; overflow-y:auto;">
+        <h3 style="margin-bottom:1.5rem;"><i class="ph ph-truck"></i> Registrar Entrada de Estoque</h3>
+        
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">FORNECEDOR</label>
+            <select id="pur-supplier" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;"></select>
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">ADICIONAR PRODUTO</label>
+            <div style="display:flex; gap:0.5rem;">
+                <select id="pur-prod-select" style="flex:2; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;">
+                    <option value="">Selecione um produto/variação...</option>
+                </select>
+                <input type="number" id="pur-prod-qty" value="1" min="1" style="width:60px; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+                <button onclick="addPurchaseItem()" class="btn btn-secondary" style="padding:0.6rem;"><i class="ph ph-plus"></i></button>
+            </div>
+        </div>
+
+        <div id="pur-items-list" style="margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+            <!-- Itens adicionados -->
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1.1rem; border-top:1px solid var(--glass-border); padding-top:1rem; margin-bottom:1.5rem;">
+            <span>Total Compra:</span>
+            <span id="pur-total" style="color:var(--accent);">R$ 0,00</span>
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="document.getElementById('purchase-modal').style.display='none'" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="savePurchase()" id="btn-save-purchase" class="btn btn-primary" style="flex:1; justify-content:center;">Finalizar Entrada</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     const today     = new Date().toISOString().split('T')[0];
@@ -228,11 +310,117 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
     function br(v) { return `R$ ${Number(v||0).toFixed(2)}`; }
     function pct(v) { return `${Number(v||0).toFixed(1)}%`; }
 
+    /* ---------- COMPRAS ---------- */
+    async function loadPurchases() {
+        const res = await fetch('/api/purchases');
+        const data = await res.json();
+        document.getElementById('purchases-tbody').innerHTML = data.length
+            ? data.map(p => `<tr>
+                <td style="color:var(--text-muted);">#${p.id}</td>
+                <td>${p.data}</td>
+                <td style="font-weight:600;">${p.supplier||'—'}</td>
+                <td><span class="badge-ok">ENTREGUE</span></td>
+                <td style="text-align:right;font-weight:700;">${br(p.total)}</td>
+              </tr>`).join('')
+            : '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum pedido de compra.</td></tr>';
+    }
+
+    let purchaseCart = [];
+    async function openPurchaseModal() {
+        // Carrega fornecedores
+        const supRes = await fetch('/api/suppliers');
+        const suppliers = await supRes.json();
+        const supSelect = document.getElementById('pur-supplier');
+        supSelect.innerHTML = suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('') || '<option value="">Nenhum fornecedor cadastrado</option>';
+
+        // Carrega produtos para o select
+        const prodRes = await fetch('/api/products');
+        const prods = await prodRes.json();
+        const prodSelect = document.getElementById('pur-prod-select');
+        prodSelect.innerHTML = '<option value="">Selecione...</option>';
+        prods.forEach(p => {
+            p.variations.forEach(v => {
+                prodSelect.innerHTML += `<option value="${v.id}" data-name="${p.name}" data-size="${v.size}" data-cost="${p.cost || 0}">${p.name} (${v.size}) - Custo: ${br(p.cost)}</option>`;
+            });
+        });
+
+        purchaseCart = [];
+        renderPurchaseCart();
+        document.getElementById('purchase-modal').style.display = 'flex';
+    }
+
+    function addPurchaseItem() {
+        const sel = document.getElementById('pur-prod-select');
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) return;
+
+        const qty = parseInt(document.getElementById('pur-prod-qty').value) || 1;
+        const variation_id = parseInt(opt.value);
+        
+        const existing = purchaseCart.find(i => i.variation_id === variation_id);
+        if (existing) { existing.qty += qty; }
+        else {
+            purchaseCart.push({
+                variation_id,
+                name: opt.dataset.name,
+                size: opt.dataset.size,
+                cost: parseFloat(opt.dataset.cost) || 0,
+                qty: qty
+            });
+        }
+        renderPurchaseCart();
+    }
+
+    function renderPurchaseCart() {
+        const list = document.getElementById('pur-items-list');
+        let total = 0;
+        list.innerHTML = purchaseCart.map((item, idx) => {
+            total += item.cost * item.qty;
+            return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:8px;">
+                <div style="font-size:0.8rem;">
+                    <div style="font-weight:600;">${item.name} (${item.size})</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">${item.qty} x ${br(item.cost)}</div>
+                </div>
+                <button onclick="purchaseCart.splice(${idx},1);renderPurchaseCart();" style="background:none; border:none; color:var(--secondary);"><i class="ph ph-trash"></i></button>
+            </div>`;
+        }).join('');
+        document.getElementById('pur-total').textContent = br(total);
+    }
+
+    async function savePurchase() {
+        if (purchaseCart.length === 0) return alert('Adicione itens.');
+        const supplier_id = parseInt(document.getElementById('pur-supplier').value);
+        if (!supplier_id) return alert('Selecione um fornecedor.');
+
+        const btn = document.getElementById('btn-save-purchase');
+        btn.disabled = true;
+        btn.textContent = 'Processando...';
+
+        try {
+            const res = await fetch('/api/purchases', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    supplier_id,
+                    items: purchaseCart.map(i => ({ variation_id: i.variation_id, quantity: i.qty, cost: i.cost }))
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('✅ Compra registrada e estoque atualizado!');
+                document.getElementById('purchase-modal').style.display = 'none';
+                loadAll();
+            } else { alert('Erro ao salvar.'); }
+        } catch (e) { alert('Erro de conexão.'); }
+        btn.disabled = false;
+        btn.textContent = 'Finalizar Entrada';
+    }
+
     async function loadAll() {
         const start = document.getElementById('start-date').value;
         const end   = document.getElementById('end-date').value;
         const qs    = `start_date=${start}&end_date=${end}`;
-        await Promise.all([loadVendas(qs), loadProdutos(qs), loadClientes(qs), loadEstoque()]);
+        await Promise.all([loadVendas(qs), loadProdutos(qs), loadClientes(qs), loadEstoque(), loadPurchases()]);
     }
 
     /* ---------- VENDAS ---------- */
@@ -316,11 +504,61 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
                     <td style="font-size:0.8rem;">${entrega}</td>
                     <td><span style="color:${sc};font-weight:700;font-size:0.75rem;">${label}</span></td>
                     <td style="text-align:right;font-weight:700;">${br(s.total)}</td>
+                    <td style="text-align:center;">
+                        ${s.status === 'completed' ? `<button onclick="openExchangeModal(${s.id})" class="btn btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.7rem;border-color:#f59e0b;color:#f59e0b;"><i class="ph ph-arrows-left-right"></i> Trocar</button>` : '—'}
+                    </td>
                 </tr>`;
               }).join('')
-            : '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhuma venda no período.</td></tr>';
+            : '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhuma venda no período.</td></tr>';
         document.getElementById('sales-total').textContent = br(total);
         currentExportData = allSales;
+    }
+
+    let currentExchangeSaleId = null;
+    async function openExchangeModal(saleId) {
+        currentExchangeSaleId = saleId;
+        const res = await fetch(`/api/sales/${saleId}`);
+        const sale = await res.json();
+        const list = document.getElementById('exchange-items-list');
+        list.innerHTML = sale.items.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.75rem; border-radius:8px;">
+                <div style="font-size:0.85rem;">
+                    <div style="font-weight:600;">${item.product_name}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">${item.variation_name || ''}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" class="exch-check" data-varid="${item.variation_id}" data-qty="${item.quantity}" style="width:18px; height:18px;">
+                    <span style="font-size:0.8rem;">x${item.quantity}</span>
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('exch-reason').value = '';
+        document.getElementById('exchange-modal').style.display = 'flex';
+    }
+
+    async function confirmExchange() {
+        const checks = document.querySelectorAll('.exch-check:checked');
+        if (checks.length === 0) return alert('Selecione ao menos um item.');
+        
+        const items = Array.from(checks).map(c => ({
+            variation_id: parseInt(c.dataset.varid),
+            qty: parseInt(c.dataset.qty)
+        }));
+
+        const res = await fetch('/api/exchanges', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                sale_id: currentExchangeSaleId,
+                items: items,
+                reason: document.getElementById('exch-reason').value
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Troca registrada e estoque estornado!');
+            document.getElementById('exchange-modal').style.display = 'none';
+            loadAll();
+        } else { alert('Erro ao registrar troca.'); }
     }
 
     /* ---------- PRODUTOS ---------- */

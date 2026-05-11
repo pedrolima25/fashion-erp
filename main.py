@@ -1694,6 +1694,119 @@ def save_company_slug(request: Request, db: Session = Depends(get_db), slug: str
     company.slug = slug; db.commit()
     return {"success": True, "url": f"/catalogo/{slug}"}
 
+# --- VENDEDORES E COMISSÕES ---
+
+class SellerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    commission_rate: float = 0.0
+
+@app.get("/api/sellers")
+def list_sellers(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    sellers = db.query(Seller).filter(Seller.company_id == cid, Seller.active == True).all()
+    return [{"id": s.id, "name": s.name, "phone": s.phone, "commission_rate": s.commission_rate} for s in sellers]
+
+@app.post("/api/sellers")
+def create_seller(data: SellerCreate, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    seller = Seller(company_id=cid, name=data.name, phone=data.phone, commission_rate=data.commission_rate)
+    db.add(seller); db.commit()
+    return {"success": True, "id": seller.id}
+
+@app.delete("/api/sellers/{seller_id}")
+def delete_seller(seller_id: int, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    seller = db.query(Seller).filter(Seller.id == seller_id, Seller.company_id == cid).first()
+    if not seller: return JSONResponse(status_code=404, content={"error": "Vendedor nao encontrado."})
+    seller.active = False; db.commit()
+    return {"success": True}
+
+# --- FORNECEDORES E COMPRAS ---
+
+class SupplierCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    cnpj: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.get("/api/suppliers")
+def list_suppliers(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    suppliers = db.query(Supplier).filter(Supplier.company_id == cid, Supplier.active == True).all()
+    return [{"id": sup.id, "name": sup.name, "phone": sup.phone, "email": sup.email, "cnpj": sup.cnpj} for sup in suppliers]
+
+@app.post("/api/suppliers")
+def create_supplier(data: SupplierCreate, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    supplier = Supplier(company_id=cid, name=data.name, phone=data.phone, email=data.email, cnpj=data.cnpj, notes=data.notes)
+    db.add(supplier); db.commit()
+    return {"success": True, "id": supplier.id}
+
+# --- TROCAS E DEVOLUÇÕES ---
+
+class ExchangeCreate(BaseModel):
+    sale_id: int
+    items: List[dict] # [{"variation_id": 1, "qty": 1}]
+    type: str = "exchange" # exchange, refund
+    reason: str = ""
+    refund_amount: float = 0.0
+
+@app.post("/api/exchanges")
+def register_exchange(data: ExchangeCreate, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    sale = db.query(Sale).filter(Sale.id == data.sale_id, Sale.company_id == cid).first()
+    if not sale: return JSONResponse(status_code=404, content={"error": "Venda nao encontrada."})
+    
+    # Restaura estoque dos itens devolvidos
+    for item in data.items:
+        var = db.query(ProductVariation).filter(ProductVariation.id == item["variation_id"]).first()
+        if var:
+            var.stock_quantity += item["qty"]
+            # Log de estoque
+            log = StockTransaction(variation_id=var.id, type="entry", quantity=item["qty"], description=f"Devolucao/Troca ref. Venda #{sale.id}")
+            db.add(log)
+    
+    exchange = Exchange(
+        company_id=cid, sale_id=data.sale_id, 
+        items_json=json.dumps(data.items), type=data.type, 
+        reason=data.reason, refund_amount=data.refund_amount
+    )
+    db.add(exchange)
+    
+    if data.type == "refund" and data.refund_amount > 0:
+        tx = Transaction(company_id=cid, type="expense", amount=data.refund_amount, description=f"Reembolso Venda #{sale.id}", payment_method="OUTRO")
+        db.add(tx)
+        
+    db.commit()
+    return {"success": True}
+
+# --- ALERTAS E ETIQUETAS ---
+
+@app.get("/api/reports/low-stock")
+def get_low_stock(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    # Busca variacoes com estoque <= 3
+    items = db.query(ProductVariation).join(Product).filter(Product.company_id == cid, ProductVariation.stock_quantity <= 3, Product.active == True).all()
+    return [{"id": i.id, "product": i.product.name, "size": i.size, "color": i.color, "stock": i.stock_quantity} for i in items]
+
+@app.get("/api/products/labels")
+def generate_labels(product_id: int, qty: int = 1, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product: return HTMLResponse("Produto nao encontrado", status_code=404)
+    
+    label_html = f"""
+    <div style="width: 4cm; height: 2.5cm; border: 1px solid #ccc; padding: 5px; margin: 5px; float: left; font-family: sans-serif; text-align: center;">
+        <div style="font-size: 10px; font-weight: bold; margin-bottom: 3px;">{product.company.name if product.company else 'FASHION ERP'}</div>
+        <div style="font-size: 12px; margin-bottom: 5px;">{product.name}</div>
+        <div style="font-size: 16px; font-weight: 800; color: #000;">R$ {product.base_price:.2f}</div>
+        <div style="font-size: 8px; margin-top: 5px;">ID: {product.id} | FASHION ERP</div>
+    </div>
+    """
+    full_html = f"<html><body><div style='display:flex; flex-wrap:wrap;'>{''.join([label_html for _ in range(qty)])}</div><script>window.print()</script></body></html>"
+    return HTMLResponse(full_html)
+
 # --- HEALTH CHECK ---
 
 @app.get("/health")

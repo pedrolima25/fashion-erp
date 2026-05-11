@@ -156,6 +156,14 @@
             </div>
         </div>
 
+        <!-- VENDEDOR (FASE 2) -->
+        <div style="padding:0.75rem; border-radius:10px; background:rgba(99,102,241,0.05); margin-bottom:0.75rem; border:1px solid rgba(99,102,241,0.15);">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.3rem; font-weight:700;">VENDEDOR</label>
+            <select id="sale-seller" style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem;">
+                <option value="">Nenhum / Loja</option>
+            </select>
+        </div>
+
         <!-- Totais -->
         <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:0.75rem; margin-bottom:0.75rem;">
             <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.35rem;">
@@ -439,6 +447,7 @@
                 price: item.price
             })),
             payment_method: document.getElementById('payment-method').value,
+            seller_id: parseInt(document.getElementById('sale-seller').value) || null,
             discount: parseFloat(document.getElementById('cart-discount').value) || 0,
             delivery_type: deliveryType,
             delivery_fee: isDelivery ? (parseFloat(document.getElementById('delivery-fee').value) || 0) : 0,
@@ -651,6 +660,21 @@
         }
     }
     checkCash();
+
+    async function loadSellers() {
+        try {
+            const res = await fetch('/api/sellers');
+            const data = await res.json();
+            const select = document.getElementById('sale-seller');
+            data.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                select.appendChild(opt);
+            });
+        } catch (e) {}
+    }
+    loadSellers();
 
     loadCategories();
     loadProducts();
