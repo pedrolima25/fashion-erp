@@ -509,6 +509,12 @@
         } else {
             feeRow.style.display = 'none';
         }
+
+        // Automatização: se houver apenas um pagamento, atualiza o valor dele
+        if (payments.length === 1) {
+            payments[0].amount = total;
+            renderPayments();
+        }
     }
 
     let payments = [{ method: 'Dinheiro', amount: 0 }];
