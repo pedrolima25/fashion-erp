@@ -418,11 +418,11 @@ def run_migrations():
         if 'delivery_status' not in cols_sales:
             conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_status VARCHAR DEFAULT 'waiting'"))
         if 'delivery_assigned_at' not in cols_sales:
-            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_assigned_at DATETIME"))
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_assigned_at TIMESTAMP"))
         if 'delivery_dispatched_at' not in cols_sales:
-            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_dispatched_at DATETIME"))
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_dispatched_at TIMESTAMP"))
         if 'delivery_completed_at' not in cols_sales:
-            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_completed_at DATETIME"))
+            conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_completed_at TIMESTAMP"))
         if 'seller_id' not in cols_sales:
             conn.execute(text("ALTER TABLE sales ADD COLUMN seller_id INTEGER"))
 
