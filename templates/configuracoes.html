@@ -147,6 +147,82 @@
             <button onclick="alert('Sessão resetada')" class="btn btn-secondary" style="color: var(--secondary); border-color: rgba(244, 63, 94, 0.2); width: 100%; justify-content: center; font-size: 0.8rem;">
                 Resetar Sessão do Robô
             </button>
+    </div>
+</div>
+
+<!-- NOVAS SEÇÕES: Catálogo + Cupons + Fidelidade -->
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+
+    <!-- CATÁLOGO ONLINE -->
+    <div class="glass" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-size: 1rem;">
+            <i class="fas fa-store" style="color: #8b5cf6;"></i> Catálogo Online
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Slug do Catálogo</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="conf-slug" placeholder="minha-loja" style="flex:1; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; font-size: 0.85rem;">
+                    <button onclick="saveSlug()" class="btn btn-primary" style="padding: 0.7rem 1rem;"><i class="fas fa-save"></i></button>
+                </div>
+            </div>
+            <div id="catalog-link" style="display: none; padding: 0.75rem; background: rgba(139,92,246,0.1); border-radius: 8px; border: 1px solid rgba(139,92,246,0.3);">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.3rem;">Link do seu catálogo:</div>
+                <a id="catalog-url" href="#" target="_blank" style="color: #8b5cf6; font-weight: 700; font-size: 0.85rem; word-break: break-all;"></a>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted);">
+                Compartilhe o link no WhatsApp/Instagram. Clientes podem ver produtos e comprar.
+            </p>
+        </div>
+    </div>
+
+    <!-- CUPONS DE DESCONTO -->
+    <div class="glass" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-size: 1rem;">
+            <i class="fas fa-ticket-alt" style="color: #f59e0b;"></i> Cupons de Desconto
+        </h3>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+            <input type="text" id="cup-code" placeholder="VERAO10" style="flex:1; min-width:80px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.8rem; text-transform: uppercase;">
+            <select id="cup-type" style="padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--bg); color: white; font-size: 0.8rem;">
+                <option value="percent">%</option>
+                <option value="fixed">R$</option>
+            </select>
+            <input type="number" id="cup-value" placeholder="10" style="width:60px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.8rem;">
+            <button onclick="createCoupon()" class="btn btn-primary" style="padding: 0.6rem 0.8rem;"><i class="fas fa-plus"></i></button>
+        </div>
+        <div id="coupons-list" style="max-height: 200px; overflow-y: auto; display: grid; gap: 0.4rem;"></div>
+    </div>
+
+    <!-- FIDELIDADE -->
+    <div class="glass" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-size: 1rem;">
+            <i class="fas fa-star" style="color: #14b8a6;"></i> Programa de Fidelidade
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                <input type="checkbox" id="loy-active" style="width: 1.2rem; height: 1.2rem; accent-color: #14b8a6;">
+                <span style="font-size: 0.9rem; font-weight: 600;">Ativar Programa</span>
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Pontos por R$1</label>
+                    <input type="number" id="loy-rate" value="1" step="0.1" style="width:100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Pontos p/ resgate</label>
+                    <input type="number" id="loy-threshold" value="100" style="width:100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Valor do resgate (R$)</label>
+                <input type="number" id="loy-value" value="10" step="0.01" style="width:100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+            </div>
+            <button onclick="saveLoyalty()" class="btn btn-primary" style="width: 100%; justify-content: center; height: 40px; font-size: 0.85rem;">
+                <i class="fas fa-save"></i> Salvar Fidelidade
+            </button>
+            <p style="font-size: 0.72rem; color: var(--text-muted);">
+                Ex: 1pt/R$1 → cliente gasta R$100 = 100pts → troca por R$10 de desconto
+            </p>
         </div>
     </div>
 </div>
@@ -301,7 +377,111 @@
         }
     }
 
+    // --- CATÁLOGO ---
+    async function loadSlug() {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (data.slug) {
+            document.getElementById('conf-slug').value = data.slug;
+            const url = `${location.origin}/catalogo/${data.slug}`;
+            document.getElementById('catalog-url').href = url;
+            document.getElementById('catalog-url').textContent = url;
+            document.getElementById('catalog-link').style.display = 'block';
+        }
+    }
+
+    async function saveSlug() {
+        const slug = document.getElementById('conf-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
+        if (!slug) return alert('Digite um slug para o catálogo.');
+        const res = await fetch(`/api/config/slug?slug=${encodeURIComponent(slug)}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            const url = `${location.origin}${data.url}`;
+            document.getElementById('catalog-url').href = url;
+            document.getElementById('catalog-url').textContent = url;
+            document.getElementById('catalog-link').style.display = 'block';
+            alert('✅ Catálogo salvo! Compartilhe o link.');
+        } else {
+            alert(data.error || 'Erro ao salvar slug.');
+        }
+    }
+
+    // --- CUPONS ---
+    async function loadCoupons() {
+        const res = await fetch('/api/coupons');
+        const coupons = await res.json();
+        const el = document.getElementById('coupons-list');
+        if (coupons.length === 0) {
+            el.innerHTML = '<p style="font-size:0.8rem;color:var(--text-muted);text-align:center;padding:1rem;">Nenhum cupom ativo.</p>';
+            return;
+        }
+        el.innerHTML = coupons.map(c => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.75rem;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--glass-border);">
+                <div>
+                    <span style="font-weight:700;color:#f59e0b;font-size:0.9rem;">${c.code}</span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);margin-left:0.5rem;">
+                        ${c.discount_type === 'percent' ? c.discount_value + '%' : 'R$ ' + c.discount_value.toFixed(2)} OFF
+                    </span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);margin-left:0.5rem;">
+                        (${c.current_uses}${c.max_uses > 0 ? '/' + c.max_uses : '/∞'} usos)
+                    </span>
+                </div>
+                <button onclick="deleteCoupon(${c.id})" style="background:none;border:none;color:var(--secondary);cursor:pointer;font-size:0.85rem;"><i class="fas fa-trash"></i></button>
+            </div>`).join('');
+    }
+
+    async function createCoupon() {
+        const code = document.getElementById('cup-code').value.trim();
+        const type = document.getElementById('cup-type').value;
+        const value = parseFloat(document.getElementById('cup-value').value);
+        if (!code || isNaN(value) || value <= 0) return alert('Preencha código e valor.');
+        const res = await fetch('/api/coupons', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code, discount_type: type, discount_value: value })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('cup-code').value = '';
+            document.getElementById('cup-value').value = '';
+            loadCoupons();
+        } else { alert(data.error || 'Erro ao criar cupom.'); }
+    }
+
+    async function deleteCoupon(id) {
+        if (!confirm('Excluir este cupom?')) return;
+        await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
+        loadCoupons();
+    }
+
+    // --- FIDELIDADE ---
+    async function loadLoyalty() {
+        const res = await fetch('/api/loyalty/config');
+        const data = await res.json();
+        document.getElementById('loy-active').checked = data.active || false;
+        document.getElementById('loy-rate').value = data.points_per_real || 1;
+        document.getElementById('loy-threshold').value = data.redemption_threshold || 100;
+        document.getElementById('loy-value').value = data.redemption_value || 10;
+    }
+
+    async function saveLoyalty() {
+        const res = await fetch('/api/loyalty/config', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                active: document.getElementById('loy-active').checked,
+                points_per_real: parseFloat(document.getElementById('loy-rate').value) || 1,
+                redemption_threshold: parseInt(document.getElementById('loy-threshold').value) || 100,
+                redemption_value: parseFloat(document.getElementById('loy-value').value) || 10
+            })
+        });
+        const data = await res.json();
+        if (data.success) alert('✅ Fidelidade salva!');
+        else alert('Erro ao salvar.');
+    }
+
     loadSettings();
-    pollStatus(); // Verifica status ao entrar
+    loadSlug();
+    loadCoupons();
+    loadLoyalty();
+    pollStatus();
 </script>
 {% endblock %}

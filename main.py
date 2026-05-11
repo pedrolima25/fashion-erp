@@ -833,7 +833,8 @@ def get_settings(request: Request, db: Session = Depends(get_db)):
         "address": comp.address,
         "location_link": comp.location_link,
         "delivery_fee": comp.delivery_fee,
-        "delivery_mode": comp.delivery_mode or "fixed"
+        "delivery_mode": comp.delivery_mode or "fixed",
+        "slug": comp.slug or ""
     }
 
 @app.post("/api/config/save")
