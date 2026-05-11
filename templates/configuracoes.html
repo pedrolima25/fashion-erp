@@ -286,6 +286,31 @@
         </div>
         <p style="font-size:0.65rem; color:var(--text-muted);">Esta meta será usada para calcular o progresso no Dashboard.</p>
     </div>
+
+    <!-- GESTÃO DE USUÁRIOS (FASE 4) -->
+    <div class="glass" style="padding:1.5rem; border:1px solid rgba(99,102,241,0.2);">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+            <div style="width:40px; height:40px; background:rgba(99,102,241,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-users-cog" style="color:var(--primary);"></i>
+            </div>
+            <div>
+                <h3 style="font-size:1rem; margin-bottom:0.1rem;">Gestão de Usuários</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted);">Equipe e Níveis de Acesso</p>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+            <input type="text" id="user-new-name" placeholder="Usuário" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+            <input type="password" id="user-new-pass" placeholder="Senha" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+        </div>
+        <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
+            <select id="user-new-role" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+                <option value="admin">Administrador (Tudo)</option>
+                <option value="seller">Vendedor (Limitado)</option>
+            </select>
+            <button onclick="createUser()" class="btn btn-primary" style="padding:0.6rem 1rem;"><i class="fas fa-plus"></i></button>
+        </div>
+        <div id="users-list" style="display:grid; gap:0.5rem;"></div>
+    </div>
 </div>
 
 <script>
@@ -628,6 +653,57 @@
         else alert('Erro ao salvar meta.');
     }
 
+    // --- GESTÃO DE USUÁRIOS (FASE 4) ---
+    async function loadUsers() {
+        const res = await fetch('/api/users');
+        const data = await res.json();
+        document.getElementById('users-list').innerHTML = data.map(u => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border);">
+                <div>
+                    <span style="font-weight:600;">${u.username}</span>
+                    <span style="font-size:0.7rem; color:var(--text-muted); margin-left:0.5rem; text-transform:uppercase;">[${u.role}]</span>
+                </div>
+                <button onclick="deleteUser(${u.id})" style="background:none; border:none; color:var(--secondary); cursor:pointer;"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        `).join('');
+    }
+
+    async function createUser() {
+        const name = document.getElementById('user-new-name').value;
+        const pass = document.getElementById('user-new-pass').value;
+        const role = document.getElementById('user-new-role').value;
+        if (!name || !pass) return alert('Preencha nome e senha.');
+        
+        const res = await fetch('/api/users', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: name, password: pass, role: role})
+        });
+        if (res.ok) {
+            alert('✅ Usuário criado!');
+            loadUsers();
+        } else {
+            const err = await res.json();
+            alert(err.error || 'Erro ao criar usuário.');
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm('Excluir este usuário?')) return;
+        await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        loadUsers();
+    }
+
+    // --- RESTRIÇÃO DE ACESSO (FASE 4) ---
+    const userRole = "{{ role }}";
+    if (userRole === "seller") {
+        // Esconde abas proibidas no sidebar (se necessário) ou elementos na página
+        document.querySelectorAll('.glass').forEach(card => {
+            if (card.innerText.includes('Financeiro') || card.innerText.includes('Usuários') || card.innerText.includes('Metas')) {
+                // card.style.display = 'none'; // Descomente para esconder tudo no config
+            }
+        });
+    }
+
     loadSettings();
     loadSlug();
     loadCoupons();
@@ -635,6 +711,7 @@
     loadSellers();
     loadSuppliers();
     loadMonthlyGoal();
+    loadUsers();
     pollStatus();
 </script>
 {% endblock %}

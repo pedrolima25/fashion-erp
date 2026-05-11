@@ -277,13 +277,69 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
     </div>
 
     <!-- Performance de Vendedores -->
-    <div class="glass" style="padding:1.25rem;">
+    <div class="glass" style="padding:1.25rem; margin-bottom:1.5rem;">
         <div style="font-weight:700; font-size:0.9rem; margin-bottom:1rem;"><i class="ph ph-medal" style="color:#f59e0b;"></i> Performance da Equipe</div>
         <div style="overflow-x:auto;">
             <table>
                 <thead><tr><th>VENDEDOR</th><th>VENDAS</th><th>TOTAL VENDIDO</th><th>% COMISSÃO</th><th>COMISSÃO A PAGAR</th></tr></thead>
                 <tbody id="sellers-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecione um período...</td></tr></tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Gestão de Despesas (FASE 4) -->
+    <div class="glass" style="padding:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <div style="font-weight:700; font-size:0.9rem;"><i class="ph ph-hand-coins" style="color:var(--secondary);"></i> Lançar Despesas</div>
+            <button onclick="openExpenseModal()" class="btn btn-secondary" style="font-size:0.8rem; padding:0.5rem 1rem;">
+                <i class="ph ph-plus"></i> Nova Despesa
+            </button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>DATA</th><th>CATEGORIA</th><th>DESCRIÇÃO</th><th style="text-align:right;">VALOR</th><th>AÇÕES</th></tr></thead>
+                <tbody id="expenses-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Carregando despesas...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Despesa -->
+<div id="expense-modal" style="display:none; position:fixed; inset:0; z-index:10003; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:450px; width:100%; padding:2rem; border-radius:20px;">
+        <h3 style="margin-bottom:1.5rem;"><i class="ph ph-money"></i> Nova Despesa</h3>
+        
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">CATEGORIA</label>
+            <select id="exp-category" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+                <option value="Aluguel">🏠 Aluguel</option>
+                <option value="Energia/Água">⚡ Energia/Água</option>
+                <option value="Internet">🌐 Internet</option>
+                <option value="Marketing">📢 Marketing</option>
+                <option value="Salários">👥 Salários</option>
+                <option value="Outros">📦 Outros</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">DESCRIÇÃO</label>
+            <input type="text" id="exp-desc" placeholder="Ex: Conta de Luz Maio" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            <div>
+                <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">VALOR (R$)</label>
+                <input type="number" id="exp-amount" placeholder="0,00" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-weight:700;">
+            </div>
+            <div>
+                <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">DATA</label>
+                <input type="date" id="exp-date" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white;">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="document.getElementById('expense-modal').style.display='none'" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="saveExpense()" class="btn btn-primary" style="flex:1; justify-content:center;">Salvar</button>
         </div>
     </div>
 </div>
@@ -464,6 +520,17 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
         document.getElementById('fin-commissions').textContent = br(fin.commissions);
         document.getElementById('fin-profit').textContent = br(fin.net_profit);
         document.getElementById('fin-margin').textContent = `Margem: ${fin.margin.toFixed(1)}%`;
+        
+        // Novo campo de despesas no KPI
+        if (!document.getElementById('fin-expenses')) {
+            const expDiv = document.createElement('div');
+            expDiv.className = 'glass';
+            expDiv.style = 'padding:1.25rem; border-bottom:4px solid var(--secondary);';
+            expDiv.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700;">TOTAL DESPESAS</div>
+                               <div id="fin-expenses" style="font-size:1.5rem; font-weight:800; color:var(--secondary);">R$ 0,00</div>`;
+            document.getElementById('fin-revenue').parentElement.parentElement.appendChild(expDiv);
+        }
+        document.getElementById('fin-expenses').textContent = br(fin.expenses || 0);
 
         // Carrega Performance Vendedores
         const resSel = await fetch(`/api/reports/commissions?${qs}`);
@@ -476,6 +543,52 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
                 <td style="color:var(--text-muted);">${s.rate}%</td>
                 <td style="font-weight:700; color:#f59e0b;">${br(s.commission)}</td>
             </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Nenhuma venda com vendedor neste período.</td></tr>';
+            
+        loadExpenses(qs);
+    }
+
+    async function loadExpenses(qs) {
+        const res = await fetch(`/api/expenses?${qs}`);
+        const data = await res.json();
+        document.getElementById('expenses-tbody').innerHTML = data.map(e => `
+            <tr>
+                <td>${new Date(e.date).toLocaleDateString('pt-BR')}</td>
+                <td><span class="badge-baixo">${e.category}</span></td>
+                <td>${e.description}</td>
+                <td style="text-align:right; font-weight:700;">${br(e.amount)}</td>
+                <td>
+                    <button onclick="deleteExpense(${e.id})" style="background:none; border:none; color:var(--secondary); cursor:pointer;"><i class="ph ph-trash"></i></button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Nenhuma despesa lançada.</td></tr>';
+    }
+
+    function openExpenseModal() {
+        document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('expense-modal').style.display = 'flex';
+    }
+
+    async function saveExpense() {
+        const data = {
+            category: document.getElementById('exp-category').value,
+            description: document.getElementById('exp-desc').value,
+            amount: parseFloat(document.getElementById('exp-amount').value),
+            date: document.getElementById('exp-date').value
+        };
+        if (!data.description || !data.amount) return alert('Preencha todos os campos.');
+        
+        await fetch('/api/expenses', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        document.getElementById('expense-modal').style.display = 'none';
+        loadAll();
+    }
+
+    async function deleteExpense(id) {
+        if (!confirm('Excluir esta despesa?')) return;
+        await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
+        loadAll();
     }
 
     async function loadAll() {

@@ -87,10 +87,22 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_master = Column(Boolean, default=False)
+    role = Column(String, default="admin") # admin, seller
     
     company = relationship("Company", back_populates="users")
 
 # --- MODELS FASHION ERP ---
+
+class Expense(Base):
+    """Despesas Fixas e Variáveis"""
+    __tablename__ = "expenses"
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    category = Column(String) # Aluguel, Luz, Marketing, etc.
+    description = Column(String)
+    amount = Column(Float)
+    date = Column(DateTime(timezone=True), default=get_manaus_time)
+    created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
 class Category(Base):
     __tablename__ = "categories"
@@ -445,6 +457,10 @@ def run_migrations():
             conn.execute(text("ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0"))
         if 'total_points_earned' not in cols_cust:
             conn.execute(text("ALTER TABLE customers ADD COLUMN total_points_earned INTEGER DEFAULT 0"))
+
+        cols_users = [c['name'] for c in inspector.get_columns('users')]
+        if 'role' not in cols_users:
+            conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'admin'"))
 
         conn.commit()
     logger.info("✨ Banco de dados sincronizado.")

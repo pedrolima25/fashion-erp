@@ -44,7 +44,8 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                 "2️⃣ *Falar com Atendente*\n"
                 "3️⃣ *Meus Pedidos*\n"
                 "4️⃣ *Catálogo Completo*\n"
-                "5️⃣ *Endereço da Loja*")
+                "5️⃣ *Endereço da Loja*\n"
+                "6️⃣ *Sugestões Personalizadas* (IA)")
         
         if state.get('cart'):
             menu += f"\n\n🛒 *Seu Carrinho possui {len(state['cart'])} item(s).*\nDigite *Carrinho* para ver ou finalizar."
@@ -103,6 +104,11 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             msg = f"📍 *NOSSA LOCALIZAÇÃO*\n\n🏠 {company.address or 'Não informado'}"
             if company.location_link: msg += f"\n🗺️ {company.location_link}"
             return msg
+
+        elif text == "6":
+            sugg = get_ai_suggestions(client_phone, db, company_id)
+            if not sugg: return "Você ainda não tem histórico de compras suficiente para sugestões. Continue comprando para que eu conheça seu estilo! 👗✨"
+            return sugg
 
     elif state['step'] == 1:
         cat_id = state.get('cat_map', {}).get(text)
@@ -284,6 +290,42 @@ def finalize_cart_sale(client_phone, state, db, company_id, state_key):
         return msg
     except Exception as e:
         logger.error(f"Erro checkout: {e}"); db.rollback(); return "Erro ao finalizar."
+
+def get_ai_suggestions(client_phone: str, db, company_id: int):
+    """Sugere produtos com base no histórico do cliente."""
+    customer = db.query(Customer).filter(Customer.phone == client_phone, Customer.company_id == company_id).first()
+    if not customer: return None
+    
+    # Busca últimas compras
+    last_sales = db.query(Sale).filter(Sale.customer_id == customer.id).order_by(Sale.date.desc()).limit(3).all()
+    if not last_sales: return None
+    
+    # Pega as categorias que ele mais compra
+    cat_ids = []
+    for s in last_sales:
+        for item in s.items:
+            cat_ids.append(item.product.category_id)
+    
+    if not cat_ids: return None
+    
+    # Busca itens novos ou diferentes nessas categorias
+    suggestions = db.query(Product).filter(
+        Product.company_id == company_id,
+        Product.category_id.in_(cat_ids),
+        Product.active == True,
+        Product.show_on_whatsapp == True
+    ).order_by(Product.created_at.desc()).limit(3).all()
+    
+    if not suggestions: return None
+    
+    msg = "✨ *SUGESTÕES PARA VOCÊ* ✨\nCom base no seu estilo, acho que vai amar estes itens:\n\n"
+    img_list = []
+    for i, p in enumerate(suggestions, 1):
+        msg += f"🔹 *{p.name}* - R$ {p.base_price:.2f}\n"
+        if p.image_base64:
+            img_list.append({"image": p.image_base64, "text": f"*{p.name}*\n💰 R$ {p.base_price:.2f}"})
+            
+    return {"text": msg + "\nDigite o nome de um item para ver detalhes ou *Menu*.", "image_list": img_list}
 
 def process_message(client_phone: str, message: str, db=None, company_id: int = None) -> str:
     state_key = get_state_key(company_id, client_phone)

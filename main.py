@@ -169,6 +169,50 @@ async def marketing_worker_task():
             logger.error(f"❌ [Marketing Worker] Erro crítico: {e}")
             await asyncio.sleep(60)
 
+async def crm_worker_task():
+    """CRM Automático: Aniversários e Reativação."""
+    while True:
+        try:
+            # Executa uma vez por dia (às 09:00 de Manaus ou na inicialização)
+            logger.info("🤖 [CRM Worker] Verificando aniversariantes e clientes inativos...")
+            now = get_manaus_time()
+            today_str = now.strftime("%d/%m")
+            
+            with SessionLocal() as db:
+                companies = db.query(Company).filter(Company.active == True).all()
+                for co in companies:
+                    # 1. ANIVERSARIANTES
+                    bday_customers = db.query(Customer).filter(
+                        Customer.company_id == co.id,
+                        Customer.birthday.like(f"{today_str}%")
+                    ).all()
+                    
+                    for cust in bday_customers:
+                        msg = f"🎉 Parabéns, *{cust.name}*! 🎂\n\nA equipe da *{co.name}* deseja um dia incrível! Como presente, você ganhou um desconto especial em sua próxima compra. Use o cupom: *PARABENS10* 🎈"
+                        await asyncio.to_thread(whatsapp_manager.send_message, co.id, f"{cust.phone}@s.whatsapp.net", msg)
+                        await asyncio.sleep(2)
+
+                    # 2. REATIVAÇÃO (Inativos há 45 dias)
+                    forty_five_days_ago = now - timedelta(days=45)
+                    # Busca clientes que a última venda foi há mais de 45 dias
+                    # Simplificado: clientes que não tiveram vendas registradas no período
+                    inactive_customers = db.query(Customer).filter(
+                        Customer.company_id == co.id
+                    ).all()
+                    
+                    for cust in inactive_customers:
+                        last_sale = db.query(Sale).filter(Sale.customer_id == cust.id).order_by(Sale.date.desc()).first()
+                        if last_sale and last_sale.date < forty_five_days_ago:
+                            msg = f"Oi *{cust.name}*! 🤗 Sentimos sua falta aqui na *{co.name}*.\n\nFaz um tempinho que você não nos visita... Que tal conferir as novidades da semana? 👗✨"
+                            await asyncio.to_thread(whatsapp_manager.send_message, co.id, f"{cust.phone}@s.whatsapp.net", msg)
+                            await asyncio.sleep(2)
+
+            # Espera 24 horas para a próxima verificação
+            await asyncio.sleep(86400) 
+        except Exception as e:
+            logger.error(f"❌ [CRM Worker] Erro: {e}")
+            await asyncio.sleep(3600)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Iniciando Fashion ERP Pro...")
@@ -188,6 +232,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(self_ping_task())
     asyncio.create_task(whatsapp_keeper_task())
     asyncio.create_task(marketing_worker_task())
+    asyncio.create_task(crm_worker_task())
     asyncio.create_task(auto_connect_whatsapp_task())
 
     yield
@@ -247,6 +292,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     request.session["user"] = username_clean
     request.session["company_id"] = user.company_id
     request.session["is_master"] = user.is_master
+    request.session["role"] = user.role or "admin"
     return {"success": True}
 
 @app.get("/logout")
@@ -266,37 +312,37 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if request.session.get("is_master"):
         return templates.TemplateResponse(request, "master_admin.html", {"request": request})
         
-    return templates.TemplateResponse(request, "dashboard.html", {"request": request, "active_page": "dashboard"})
+    return templates.TemplateResponse(request, "dashboard.html", {"request": request, "active_page": "dashboard", "role": request.session.get("role")})
 
 @app.get("/vendas", response_class=HTMLResponse)
 def sales_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "vendas.html", {"request": request, "active_page": "sales"})
+    return templates.TemplateResponse(request, "vendas.html", {"request": request, "active_page": "sales", "role": request.session.get("role")})
 
 @app.get("/produtos", response_class=HTMLResponse)
 def products_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "produtos.html", {"request": request, "active_page": "products"})
+    return templates.TemplateResponse(request, "produtos.html", {"request": request, "active_page": "products", "role": request.session.get("role")})
 
 @app.get("/estoque", response_class=HTMLResponse)
 def inventory_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "estoque.html", {"request": request, "active_page": "inventory"})
+    return templates.TemplateResponse(request, "estoque.html", {"request": request, "active_page": "inventory", "role": request.session.get("role")})
 
 @app.get("/clientes", response_class=HTMLResponse)
 def customers_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "clientes.html", {"request": request, "active_page": "customers"})
+    return templates.TemplateResponse(request, "clientes.html", {"request": request, "active_page": "customers", "role": request.session.get("role")})
 
 @app.get("/financeiro", response_class=HTMLResponse)
 def finance_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "financeiro.html", {"request": request, "active_page": "finance"})
+    return templates.TemplateResponse(request, "financeiro.html", {"request": request, "active_page": "finance", "role": request.session.get("role")})
 
 @app.get("/marketing", response_class=HTMLResponse)
 def marketing_page(request: Request, db: Session = Depends(get_db)):
@@ -304,13 +350,13 @@ def marketing_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login")
     cid = request.session.get("company_id")
     company = db.query(Company).filter(Company.id == cid).first()
-    return templates.TemplateResponse(request, "marketing.html", {"request": request, "active_page": "marketing", "company": company})
+    return templates.TemplateResponse(request, "marketing.html", {"request": request, "active_page": "marketing", "company": company, "role": request.session.get("role")})
 
 @app.get("/configuracoes", response_class=HTMLResponse)
 def settings_page(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request, "configuracoes.html", {"request": request, "active_page": "settings"})
+    return templates.TemplateResponse(request, "configuracoes.html", {"request": request, "active_page": "settings", "role": request.session.get("role")})
 
 @app.get("/entregas", response_class=HTMLResponse)
 def deliveries_page(request: Request):
@@ -383,6 +429,17 @@ class SalesGoalCreate(BaseModel):
     month: int
     year: int
     target_value: float
+
+class ExpenseCreate(BaseModel):
+    category: str
+    description: str
+    amount: float
+    date: str # ISO date
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str # admin, seller
 
 class CategoryCreate(BaseModel):
     name: str
@@ -1891,7 +1948,11 @@ def get_financial_report(request: Request, start_date: str, end_date: str, db: S
         if s.seller_id and s.seller:
             total_commissions += (s.total_amount * (s.seller.commission_rate / 100))
             
-    net_profit = gross_revenue - total_cost - total_commissions
+    # SOMA DESPESAS DO PERÍODO
+    expenses = db.query(Expense).filter(Expense.company_id == cid, Expense.date >= s_dt, Expense.date <= e_dt).all()
+    total_expenses = sum(e.amount for e in expenses)
+
+    net_profit = gross_revenue - total_cost - total_commissions - total_expenses
     
     return {
         "revenue": gross_revenue,
@@ -1899,6 +1960,7 @@ def get_financial_report(request: Request, start_date: str, end_date: str, db: S
         "delivery_fees": total_fees,
         "cost_of_goods": total_cost,
         "commissions": total_commissions,
+        "expenses": total_expenses,
         "net_profit": net_profit,
         "margin": (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
     }
@@ -1933,6 +1995,70 @@ def get_commissions_report(request: Request, start_date: str, end_date: str, db:
         })
         
     return report
+
+@app.get("/api/expenses")
+def get_expenses(request: Request, start_date: str, end_date: str, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    s_dt = datetime.fromisoformat(start_date).replace(hour=0, minute=0, second=0)
+    e_dt = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+    return db.query(Expense).filter(Expense.company_id == cid, Expense.date >= s_dt, Expense.date <= e_dt).all()
+
+@app.post("/api/expenses")
+def create_expense(request: Request, data: ExpenseCreate, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    dt = datetime.fromisoformat(data.date).replace(tzinfo=manaus_tz)
+    expense = Expense(
+        company_id=cid,
+        category=data.category,
+        description=data.description,
+        amount=data.amount,
+        date=dt
+    )
+    db.add(expense)
+    db.commit()
+    return {"success": True}
+
+@app.delete("/api/expenses/{id}")
+def delete_expense(request: Request, id: int, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    exp = db.query(Expense).filter(Expense.id == id, Expense.company_id == cid).first()
+    if exp:
+        db.delete(exp)
+        db.commit()
+    return {"success": True}
+
+@app.get("/api/users")
+def get_company_users(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    users = db.query(User).filter(User.company_id == cid).all()
+    return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
+
+@app.post("/api/users")
+def create_company_user(request: Request, data: UserCreate, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    # Verifica se já existe
+    existing = db.query(User).filter(User.username == data.username.strip().lower()).first()
+    if existing:
+        return JSONResponse(status_code=400, content={"error": "Usuário já existe."})
+    
+    new_user = User(
+        company_id=cid,
+        username=data.username.strip().lower(),
+        hashed_password=pwd_context.hash(data.password),
+        role=data.role
+    )
+    db.add(new_user)
+    db.commit()
+    return {"success": True}
+
+@app.delete("/api/users/{id}")
+def delete_company_user(request: Request, id: int, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    user = db.query(User).filter(User.id == id, User.company_id == cid).first()
+    if user:
+        db.delete(user)
+        db.commit()
+    return {"success": True}
 
 # --- HEALTH CHECK ---
 

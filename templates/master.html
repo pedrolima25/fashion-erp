@@ -109,21 +109,25 @@
                 <a href="/clientes" class="nav-item {% if active_page == 'customers' %}active{% endif %}">
                     <i class="ph ph-users-three"></i> Clientes
                 </a>
+                {% if role != 'seller' %}
                 <a href="/financeiro" class="nav-item {% if active_page == 'finance' %}active{% endif %}">
                     <i class="ph ph-coins"></i> Financeiro
                 </a>
                 <a href="/relatorios" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
                     <i class="ph ph-file-text"></i> Relatórios
                 </a>
+                {% endif %}
                 <a href="/marketing" class="nav-item {% if active_page == 'marketing' %}active{% endif %}">
                     <i class="ph ph-megaphone-simple"></i> Divulgação
                 </a>
                 
                 <div style="margin: 1.5rem 0.5rem 1rem; border-top: 1px solid var(--glass-border);"></div>
                 
+                {% if role != 'seller' %}
                 <a href="/configuracoes" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
                     <i class="ph ph-gear-fine"></i> Ajustes
                 </a>
+                {% endif %}
                 <a href="/logout" class="nav-item" style="color: var(--secondary); opacity: 0.8;">
                     <i class="ph ph-sign-out"></i> Sair
                 </a>
