@@ -428,7 +428,7 @@ def run_migrations():
 
         cols_sub = [c['name'] for c in inspector.get_columns('subscriptions')]
         if 'saas_reminder_sent_at' not in cols_sub:
-            conn.execute(text("ALTER TABLE subscriptions ADD COLUMN saas_reminder_sent_at DATETIME"))
+            conn.execute(text("ALTER TABLE subscriptions ADD COLUMN saas_reminder_sent_at TIMESTAMP"))
         
         cols_prod = [c['name'] for c in inspector.get_columns('products')]
         if 'cost_price' not in cols_prod:
@@ -444,7 +444,7 @@ def run_migrations():
         if 'frequency' not in cols_sched:
             conn.execute(text("ALTER TABLE scheduled_campaigns ADD COLUMN frequency VARCHAR DEFAULT 'once'"))
         if 'post_to_status' not in cols_sched:
-            conn.execute(text("ALTER TABLE scheduled_campaigns ADD COLUMN post_to_status BOOLEAN DEFAULT 0"))
+            conn.execute(text("ALTER TABLE scheduled_campaigns ADD COLUMN post_to_status BOOLEAN DEFAULT FALSE"))
         
         cols_sale_items = [c['name'] for c in inspector.get_columns('sale_items')]
         if 'cost_price' not in cols_sale_items:
