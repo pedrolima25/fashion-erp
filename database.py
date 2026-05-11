@@ -59,6 +59,7 @@ class Company(Base):
     location_link = Column(Text, nullable=True)
     delivery_fee = Column(Float, default=0.0)
     delivery_mode = Column(String, default="fixed") # fixed, neighborhood
+    slug = Column(String, nullable=True, unique=True, index=True) # URL publica do catalogo
     monthly_price = Column(Float, default=80.0)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
     
@@ -161,6 +162,9 @@ class Customer(Base):
     name = Column(String, default="Cliente")
     phone = Column(String, index=True)
     email = Column(String, nullable=True)
+    birthday = Column(String, nullable=True) # DD/MM formato
+    loyalty_points = Column(Integer, default=0)
+    total_points_earned = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
 class Sale(Base):
@@ -248,6 +252,31 @@ class ScheduledCampaign(Base):
     post_to_status = Column(Boolean, default=False)
     status = Column(String, default="pending") # pending, sent, failed
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
+
+class Coupon(Base):
+    """Cupons de Desconto"""
+    __tablename__ = "coupons"
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    code = Column(String, index=True) # ex: VERAO10
+    discount_type = Column(String, default="percent") # percent, fixed
+    discount_value = Column(Float, default=0.0) # 10 = 10% ou R$10
+    max_uses = Column(Integer, default=0) # 0 = ilimitado
+    current_uses = Column(Integer, default=0)
+    valid_until = Column(DateTime(timezone=True), nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=get_manaus_time)
+    company = relationship("Company")
+
+class LoyaltyConfig(Base):
+    """Configuracao do programa de fidelidade por empresa"""
+    __tablename__ = "loyalty_configs"
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), unique=True)
+    points_per_real = Column(Float, default=1.0) # 1 real = 1 ponto
+    redemption_threshold = Column(Integer, default=100) # minimo de pontos
+    redemption_value = Column(Float, default=10.0) # valor do resgate em R$
+    active = Column(Boolean, default=True)
 
 # --- UTILS & INITIAL DATA ---
 
@@ -370,6 +399,22 @@ def run_migrations():
         if 'cost_price' not in cols_sale_items:
             conn.execute(text("ALTER TABLE sale_items ADD COLUMN cost_price FLOAT DEFAULT 0.0"))
         
+        conn.commit()
+
+        # Colunas em companies (fase 1)
+        cols_co = [c['name'] for c in inspector.get_columns('companies')]
+        if 'slug' not in cols_co:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN slug VARCHAR"))
+
+        # Colunas em customers (fase 1)
+        cols_cust = [c['name'] for c in inspector.get_columns('customers')]
+        if 'birthday' not in cols_cust:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN birthday VARCHAR"))
+        if 'loyalty_points' not in cols_cust:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0"))
+        if 'total_points_earned' not in cols_cust:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN total_points_earned INTEGER DEFAULT 0"))
+
         conn.commit()
     logger.info("✨ Banco de dados sincronizado.")
 

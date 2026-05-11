@@ -18,7 +18,8 @@ from database import (
     get_manaus_time, manaus_tz, User, Company, 
     Subscription, pwd_context, Category, Product, ProductVariation, 
     Customer, Sale, SaleItem, Transaction, Neighborhood, run_migrations,
-    populate_initial_data, ScheduledCampaign, DailyCash, DeliveryDriver, StockTransaction
+    populate_initial_data, ScheduledCampaign, DailyCash, DeliveryDriver, StockTransaction,
+    Coupon, LoyaltyConfig
 )
 from ai_logic import process_message
 from payments import generate_pix_payment
@@ -607,7 +608,48 @@ def confirm_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
         
         # 3. Atualizar Status
         sale.status = "completed"
+        
+        # 4. Acumular Pontos de Fidelidade
+        if sale.customer_id:
+            loyalty = db.query(LoyaltyConfig).filter(LoyaltyConfig.company_id == cid, LoyaltyConfig.active == True).first()
+            if loyalty:
+                pontos = int(sale.total_amount * loyalty.points_per_real)
+                customer = db.query(Customer).filter(Customer.id == sale.customer_id).first()
+                if customer and pontos > 0:
+                    customer.loyalty_points = (customer.loyalty_points or 0) + pontos
+                    customer.total_points_earned = (customer.total_points_earned or 0) + pontos
+        
         db.commit()
+        
+        # 5. Enviar Comprovante via WhatsApp (async, não bloqueia)
+        try:
+            if sale.customer and sale.customer.phone:
+                items_text = ""
+                for item in sale.items:
+                    pname = item.product.name if item.product else "Produto"
+                    vsize = f" ({item.variation.size})" if item.variation else ""
+                    items_text += f"  • {item.quantity}x {pname}{vsize} - R$ {item.unit_price * item.quantity:.2f}\n"
+                
+                company = db.query(Company).filter(Company.id == cid).first()
+                loja_nome = company.name.upper() if company else "LOJA"
+                
+                msg = f"✅ *COMPROVANTE DE COMPRA*\n\n"
+                msg += f"🏪 *{loja_nome}*\n"
+                msg += f"📋 Pedido #{sale.id}\n"
+                msg += f"📅 {sale.date.astimezone(manaus_tz).strftime('%d/%m/%Y %H:%M')}\n\n"
+                msg += f"*Itens:*\n{items_text}\n"
+                if sale.discount and sale.discount > 0:
+                    msg += f"💸 Desconto: -R$ {sale.discount:.2f}\n"
+                if sale.delivery_fee and sale.delivery_fee > 0:
+                    msg += f"🛵 Frete: R$ {sale.delivery_fee:.2f}\n"
+                msg += f"\n💰 *TOTAL: R$ {sale.total_amount:.2f}*\n"
+                msg += f"💳 Pagamento: {sale.payment_method}\n\n"
+                msg += f"Obrigado pela compra! 🎉"
+                
+                whatsapp_manager.send_message(cid, sale.customer.phone, msg)
+        except Exception as wp_err:
+            logger.warning(f"⚠️ Erro ao enviar comprovante WhatsApp: {wp_err}")
+        
         return {"success": True}
     except Exception as e:
         db.rollback()
@@ -1478,6 +1520,178 @@ def update_delivery_status(sale_id: int, data: DeliveryStatusSchema, request: Re
     elif data.status == "delivered": sale.delivery_completed_at = now
     db.commit()
     return {"success": True, "order": delivery_order_payload(sale)}
+
+# --- CUPONS DE DESCONTO ---
+
+class CouponCreate(BaseModel):
+    code: str
+    discount_type: str = "percent"
+    discount_value: float = 10.0
+    max_uses: int = 0
+    valid_until: Optional[str] = None
+
+@app.get("/api/coupons")
+def list_coupons(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    coupons = db.query(Coupon).filter(Coupon.company_id == cid, Coupon.active == True).order_by(Coupon.created_at.desc()).all()
+    return [{
+        "id": c.id, "code": c.code,
+        "discount_type": c.discount_type, "discount_value": c.discount_value,
+        "max_uses": c.max_uses, "current_uses": c.current_uses,
+        "valid_until": c.valid_until.astimezone(manaus_tz).strftime("%d/%m/%Y") if c.valid_until else None
+    } for c in coupons]
+
+@app.post("/api/coupons")
+def create_coupon(data: CouponCreate, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    code = data.code.strip().upper()
+    if not code: return JSONResponse(status_code=400, content={"error": "Codigo obrigatorio."})
+    existing = db.query(Coupon).filter(Coupon.company_id == cid, Coupon.code == code, Coupon.active == True).first()
+    if existing: return JSONResponse(status_code=400, content={"error": "Cupom ja existe."})
+    valid_dt = None
+    if data.valid_until:
+        try: valid_dt = datetime.fromisoformat(data.valid_until).replace(tzinfo=manaus_tz)
+        except: pass
+    coupon = Coupon(company_id=cid, code=code, discount_type=data.discount_type,
+                    discount_value=data.discount_value, max_uses=data.max_uses, valid_until=valid_dt)
+    db.add(coupon); db.commit()
+    return {"success": True, "id": coupon.id}
+
+@app.delete("/api/coupons/{coupon_id}")
+def delete_coupon(coupon_id: int, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    coupon = db.query(Coupon).filter(Coupon.id == coupon_id, Coupon.company_id == cid).first()
+    if not coupon: return JSONResponse(status_code=404, content={"error": "Cupom nao encontrado."})
+    coupon.active = False; db.commit()
+    return {"success": True}
+
+@app.post("/api/coupons/validate")
+def validate_coupon(request: Request, db: Session = Depends(get_db), code: str = ""):
+    cid = request.session.get("company_id")
+    code = code.strip().upper()
+    coupon = db.query(Coupon).filter(Coupon.company_id == cid, Coupon.code == code, Coupon.active == True).first()
+    if not coupon: return JSONResponse(status_code=404, content={"error": "Cupom invalido."})
+    if coupon.max_uses > 0 and coupon.current_uses >= coupon.max_uses:
+        return JSONResponse(status_code=400, content={"error": "Cupom esgotado."})
+    if coupon.valid_until and get_manaus_time() > coupon.valid_until:
+        return JSONResponse(status_code=400, content={"error": "Cupom expirado."})
+    return {
+        "valid": True, "discount_type": coupon.discount_type,
+        "discount_value": coupon.discount_value, "code": coupon.code
+    }
+
+# --- PROGRAMA DE FIDELIDADE ---
+
+class LoyaltyConfigCreate(BaseModel):
+    points_per_real: float = 1.0
+    redemption_threshold: int = 100
+    redemption_value: float = 10.0
+    active: bool = True
+
+@app.get("/api/loyalty/config")
+def get_loyalty_config(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    config = db.query(LoyaltyConfig).filter(LoyaltyConfig.company_id == cid).first()
+    if not config: return {"active": False, "points_per_real": 1.0, "redemption_threshold": 100, "redemption_value": 10.0}
+    return {
+        "active": config.active, "points_per_real": config.points_per_real,
+        "redemption_threshold": config.redemption_threshold, "redemption_value": config.redemption_value
+    }
+
+@app.post("/api/loyalty/config")
+def save_loyalty_config(data: LoyaltyConfigCreate, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    config = db.query(LoyaltyConfig).filter(LoyaltyConfig.company_id == cid).first()
+    if not config:
+        config = LoyaltyConfig(company_id=cid)
+        db.add(config)
+    config.points_per_real = data.points_per_real
+    config.redemption_threshold = data.redemption_threshold
+    config.redemption_value = data.redemption_value
+    config.active = data.active
+    db.commit()
+    return {"success": True}
+
+@app.post("/api/loyalty/redeem")
+def redeem_loyalty_points(request: Request, db: Session = Depends(get_db), customer_id: int = 0):
+    cid = request.session.get("company_id")
+    config = db.query(LoyaltyConfig).filter(LoyaltyConfig.company_id == cid, LoyaltyConfig.active == True).first()
+    if not config: return JSONResponse(status_code=400, content={"error": "Programa de fidelidade nao ativo."})
+    customer = db.query(Customer).filter(Customer.id == customer_id, Customer.company_id == cid).first()
+    if not customer: return JSONResponse(status_code=404, content={"error": "Cliente nao encontrado."})
+    if (customer.loyalty_points or 0) < config.redemption_threshold:
+        return JSONResponse(status_code=400, content={"error": f"Pontos insuficientes. Necessario: {config.redemption_threshold}, Atual: {customer.loyalty_points or 0}"})
+    customer.loyalty_points -= config.redemption_threshold
+    db.commit()
+    return {"success": True, "discount": config.redemption_value, "remaining_points": customer.loyalty_points}
+
+# --- CATALOGO ONLINE PUBLICO ---
+
+@app.get("/catalogo/{slug}", response_class=HTMLResponse)
+def public_catalog(slug: str, request: Request, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.slug == slug, Company.active == True).first()
+    if not company: return HTMLResponse("<h1>Loja não encontrada</h1>", status_code=404)
+    products = db.query(Product).filter(Product.company_id == company.id, Product.active == True, Product.show_on_whatsapp == True).all()
+    
+    prod_list = []
+    for p in products:
+        variations = [{"size": v.size, "color": v.color, "stock": v.stock_quantity, "price": v.price_override or p.base_price} for v in p.variations if v.stock_quantity > 0]
+        if variations:
+            prod_list.append({"name": p.name, "description": p.description or "", "price": p.base_price, "image": p.image_base64, "variations": variations})
+    
+    wa_num = company.whatsapp_number or ""
+    wa_link = f"https://wa.me/{wa_num}" if wa_num else "#"
+    
+    prods_html = ""
+    for p in prod_list:
+        img = f'<img src="{p["image"]}" style="width:100%;height:220px;object-fit:cover;border-radius:12px 12px 0 0;">' if p["image"] else '<div style="height:220px;background:#1e293b;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:3rem;">👗</div>'
+        sizes = ", ".join(set(v["size"] for v in p["variations"]))
+        msg_text = f"Oi! Tenho interesse no produto *{p['name']}*"
+        prods_html += f'''
+        <div style="background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid #334155;">
+            {img}
+            <div style="padding:1rem;">
+                <div style="font-weight:700;font-size:1rem;margin-bottom:0.3rem;">{p["name"]}</div>
+                <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:0.5rem;">{p["description"][:80]}</div>
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.75rem;">Tamanhos: {sizes}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:1.3rem;font-weight:800;color:#14b8a6;">R$ {p["price"]:.2f}</span>
+                    <a href="{wa_link}?text={msg_text}" target="_blank" style="background:#25d366;color:white;padding:0.5rem 1rem;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.85rem;">💬 Comprar</a>
+                </div>
+            </div>
+        </div>'''
+    
+    html = f'''<!DOCTYPE html>
+    <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{company.name} - Catálogo</title>
+    <style>
+        *{{margin:0;padding:0;box-sizing:border-box;}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:white;}}
+        .header{{background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:1.5rem;text-align:center;}}
+        .header h1{{font-size:1.5rem;font-weight:800;}}
+        .header p{{font-size:0.85rem;opacity:0.8;margin-top:0.3rem;}}
+        .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding:1rem;max-width:1000px;margin:auto;}}
+        .footer{{text-align:center;padding:2rem;color:#64748b;font-size:0.75rem;}}
+    </style></head><body>
+    <div class="header">
+        <h1>{company.name}</h1>
+        <p>Catálogo de Produtos</p>
+    </div>
+    <div class="grid">{prods_html}</div>
+    <div class="footer">Powered by Fashion ERP Pro</div>
+    </body></html>'''
+    return HTMLResponse(html)
+
+@app.post("/api/config/slug")
+def save_company_slug(request: Request, db: Session = Depends(get_db), slug: str = ""):
+    cid = request.session.get("company_id")
+    slug = slug.strip().lower().replace(" ", "-")
+    if not slug: return JSONResponse(status_code=400, content={"error": "Slug obrigatorio."})
+    existing = db.query(Company).filter(Company.slug == slug, Company.id != cid).first()
+    if existing: return JSONResponse(status_code=400, content={"error": "Este slug ja esta em uso."})
+    company = db.query(Company).filter(Company.id == cid).first()
+    company.slug = slug; db.commit()
+    return {"success": True, "url": f"/catalogo/{slug}"}
 
 # --- HEALTH CHECK ---
 

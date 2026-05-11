@@ -33,7 +33,7 @@
         <h3 style="font-size: 1.25rem;">Movimentações Financeiras</h3>
         <div style="display: flex; gap: 0.75rem;">
             <button class="btn btn-secondary" onclick="openExpenseModal()"><i class="fas fa-minus-circle"></i> Lançar Despesa</button>
-            <button class="btn btn-primary" onclick="alert('Relatório PDF sendo implementado')"><i class="fas fa-file-export"></i> Relatório</button>
+            <button class="btn btn-primary" onclick="printReport()"><i class="fas fa-file-export"></i> Relatório</button>
         </div>
     </div>
 
@@ -169,6 +169,49 @@
             loadFinance();
             // Som de sucesso (opcional)
         }
+    }
+
+    function printReport() {
+        const entradas = document.getElementById('stats-entradas').innerText;
+        const custo = document.getElementById('stats-custo').innerText;
+        const lucroBruto = document.getElementById('stats-lucro-bruto').innerText;
+        const saidas = document.getElementById('stats-saidas').innerText;
+        const saldo = document.getElementById('stats-saldo').innerText;
+        const rows = document.getElementById('finance-list').innerHTML;
+        const now = new Date();
+        const dataHora = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+        const html = `<html><head><title>Relatório Financeiro</title>
+        <style>
+            body{font-family:Arial,sans-serif;padding:30px;color:#222;max-width:800px;margin:auto;}
+            h1{font-size:1.4rem;border-bottom:2px solid #333;padding-bottom:8px;}
+            .info{font-size:0.8rem;color:#666;margin-bottom:20px;}
+            .kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;}
+            .kpi{border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center;}
+            .kpi-label{font-size:0.75rem;color:#666;font-weight:700;text-transform:uppercase;}
+            .kpi-value{font-size:1.3rem;font-weight:800;margin-top:4px;}
+            table{width:100%;border-collapse:collapse;margin-top:16px;}
+            th{background:#f5f5f5;padding:8px 10px;text-align:left;font-size:0.8rem;border-bottom:2px solid #ddd;}
+            td{padding:8px 10px;border-bottom:1px solid #eee;font-size:0.85rem;}
+            .green{color:#16a34a;} .red{color:#dc2626;}
+            @media print{body{padding:15px;}}
+        </style></head><body onload="window.print()">
+        <h1>📊 Relatório Financeiro Mensal</h1>
+        <div class="info">Gerado em ${dataHora}</div>
+        <div class="kpis">
+            <div class="kpi"><div class="kpi-label">Faturamento</div><div class="kpi-value green">${entradas}</div></div>
+            <div class="kpi"><div class="kpi-label">Custo de Vendas</div><div class="kpi-value">${custo}</div></div>
+            <div class="kpi"><div class="kpi-label">Lucro Bruto</div><div class="kpi-value">${lucroBruto}</div></div>
+            <div class="kpi"><div class="kpi-label">Outras Despesas</div><div class="kpi-value red">${saidas}</div></div>
+            <div class="kpi"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value" style="font-size:1.5rem;">${saldo}</div></div>
+        </div>
+        <h2 style="font-size:1.1rem;margin-top:24px;">Movimentações</h2>
+        <table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Método</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table>
+        </body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
     }
 
     loadFinance();
