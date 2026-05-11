@@ -591,12 +591,15 @@
 
         const payload = {
             items: cart.map(item => ({
-                product_id: item.product_id,
-                variation_id: item.variation_id,
-                quantity: item.quantity,
-                price: item.price
+                product_id: parseInt(item.product_id),
+                variation_id: item.variation_id ? parseInt(item.variation_id) : null,
+                quantity: parseInt(item.quantity),
+                price: parseFloat(item.price)
             })),
-            payments: payments, // Novo: lista de pagamentos
+            payments: payments.map(p => ({
+                method: p.method,
+                amount: parseFloat(p.amount) || 0
+            })),
             seller_id: parseInt(document.getElementById('sale-seller').value) || null,
             discount: parseFloat(document.getElementById('cart-discount').value) || 0,
             delivery_type: deliveryType,
