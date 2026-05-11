@@ -19,7 +19,7 @@ from database import (
     Subscription, pwd_context, Category, Product, ProductVariation, 
     Customer, Sale, SaleItem, Transaction, Neighborhood, run_migrations,
     populate_initial_data, ScheduledCampaign, DailyCash, DeliveryDriver, StockTransaction,
-    Coupon, LoyaltyConfig
+    Coupon, LoyaltyConfig, Seller, SalesGoal, Expense, Supplier
 )
 from ai_logic import process_message
 from payments import generate_pix_payment
