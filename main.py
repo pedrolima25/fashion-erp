@@ -579,7 +579,7 @@ def delete_product(product_id: int, request: Request, db: Session = Depends(get_
 
 class SaleItemSchema(BaseModel):
     product_id: int
-    variation_id: int
+    variation_id: Optional[int] = None
     quantity: int
     price: float
 
