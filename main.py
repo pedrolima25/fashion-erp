@@ -602,91 +602,95 @@ class SaleCreate(BaseModel):
 
 @app.post("/api/sales")
 def finalize_sale(data: SaleCreate, request: Request, db: Session = Depends(get_db)):
-    cid = request.session.get("company_id")
-    
-    # 1. Verifica/Cria Cliente se informado
-    customer_id = None
-    if data.customer_phone:
-        customer = db.query(Customer).filter(Customer.phone == data.customer_phone, Customer.company_id == cid).first()
-        if not customer:
-            customer = Customer(name=data.customer_name or "Cliente", phone=data.customer_phone, company_id=cid)
+    try:
+        cid = request.session.get("company_id")
+        if not cid:
+            return JSONResponse(status_code=401, content={"error": "Sessão expirada"})
+        
+        # 1. Verifica/Cria Cliente se informado
+        customer_id = None
+        if data.customer_phone:
+            customer = db.query(Customer).filter(Customer.phone == data.customer_phone, Customer.company_id == cid).first()
+            if not customer:
+                customer = Customer(name=data.customer_name or "Cliente", phone=data.customer_phone, company_id=cid)
+                db.add(customer)
+                db.flush()
+            customer_id = customer.id
+        elif data.customer_name:
+            customer = Customer(name=data.customer_name, company_id=cid)
             db.add(customer)
             db.flush()
-        customer_id = customer.id
-    elif data.customer_name:
-        # Se só tem nome, pode criar ou deixar None se preferir, aqui vamos criar
-        customer = Customer(name=data.customer_name, company_id=cid)
-        db.add(customer)
-        db.flush()
-        customer_id = customer.id
+            customer_id = customer.id
 
-    # 2. Calcula Totais
-    subtotal = sum(item.price * item.quantity for item in data.items)
-    total = subtotal - data.discount + (data.delivery_fee or 0)
-    
-    # Sumariza formas de pagamento para o campo principal da venda
-    payment_summary = ", ".join([p.method for p in data.payments])
-
-    # 3. Cria a Venda
-    new_sale = Sale(
-        company_id=cid,
-        customer_id=customer_id,
-        seller_id=data.seller_id,
-        total_amount=total,
-        discount=data.discount,
-        payment_method=payment_summary,
-        delivery_type=data.delivery_type,
-        delivery_fee=data.delivery_fee,
-        delivery_address=data.delivery_address,
-        delivery_reference=data.delivery_reference,
-        delivery_location_link=data.delivery_location_link,
-        status="paid" # Venda PDV geralmente já sai paga
-    )
-    db.add(new_sale)
-    db.flush()
-    
-    # 4. Registra Itens, Salva Custos e Baixa Estoque
-    for item in data.items:
-        # Busca o custo atual para registro histórico
-        item_cost = 0.0
-        if item.variation_id:
-            var = db.query(ProductVariation).filter(ProductVariation.id == item.variation_id).first()
-            if var:
-                item_cost = var.cost_price_override if var.cost_price_override is not None else var.product.cost_price
-                # Baixa Estoque
-                var.stock_quantity -= item.quantity
-        else:
-            prod = db.query(Product).filter(Product.id == item.product_id).first()
-            if prod:
-                item_cost = prod.cost_price
+        # 2. Calcula Totais
+        subtotal = sum(item.price * item.quantity for item in data.items)
+        total = subtotal - data.discount + (data.delivery_fee or 0)
         
-        sale_item = SaleItem(
-            sale_id=new_sale.id,
-            product_id=item.product_id,
-            variation_id=item.variation_id,
-            quantity=item.quantity,
-            unit_price=item.price,
-            cost_price=item_cost
+        # Sumariza formas de pagamento para o campo principal da venda
+        payment_summary = ", ".join([p.method for p in data.payments])
+
+        # 3. Cria a Venda
+        new_sale = Sale(
+            company_id=cid,
+            customer_id=customer_id,
+            seller_id=data.seller_id,
+            total_amount=total,
+            discount=data.discount,
+            payment_method=payment_summary,
+            delivery_type=data.delivery_type,
+            delivery_fee=data.delivery_fee,
+            delivery_address=data.delivery_address,
+            delivery_reference=data.delivery_reference,
+            delivery_location_link=data.delivery_location_link,
+            status="paid"
         )
-        db.add(sale_item)
+        db.add(new_sale)
+        db.flush()
         
-    # 5. Registra Transações Financeiras Individuais (Pagamento Misto)
-    for p in data.payments:
-        if p.amount > 0:
-            new_tx = Transaction(
-                company_id=cid,
+        # 4. Registra Itens, Salva Custos e Baixa Estoque
+        for item in data.items:
+            item_cost = 0.0
+            if item.variation_id:
+                var = db.query(ProductVariation).filter(ProductVariation.id == item.variation_id).first()
+                if var:
+                    item_cost = var.cost_price_override if var.cost_price_override is not None else var.product.cost_price
+                    var.stock_quantity -= item.quantity
+            else:
+                prod = db.query(Product).filter(Product.id == item.product_id).first()
+                if prod:
+                    item_cost = prod.cost_price
+            
+            sale_item = SaleItem(
                 sale_id=new_sale.id,
-                amount=p.amount,
-                type="receita",
-                category="Venda PDV",
-                payment_method=p.method,
-                description=f"Pgto Venda #{new_sale.id} ({p.method})",
-                date=get_manaus_time()
+                product_id=item.product_id,
+                variation_id=item.variation_id,
+                quantity=item.quantity,
+                unit_price=item.price,
+                cost_price=item_cost
             )
-            db.add(new_tx)
+            db.add(sale_item)
+            
+        # 5. Registra Transações Financeiras Individuais (Pagamento Misto)
+        for p in data.payments:
+            if p.amount > 0:
+                new_tx = Transaction(
+                    company_id=cid,
+                    sale_id=new_sale.id,
+                    amount=p.amount,
+                    type="receita",
+                    category="Venda PDV",
+                    payment_method=p.method,
+                    description=f"Pgto Venda #{new_sale.id} ({p.method})",
+                    date=get_manaus_time()
+                )
+                db.add(new_tx)
 
-    db.commit()
-    return {"success": True, "sale_id": new_sale.id}
+        db.commit()
+        return {"success": True, "sale_id": new_sale.id}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro no finalize_sale: {str(e)}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.get("/api/sales/{sale_id}")
 def get_sale_detail(sale_id: int, request: Request, db: Session = Depends(get_db)):
