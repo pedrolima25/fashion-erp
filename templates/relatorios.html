@@ -38,6 +38,9 @@
     <button class="tab-btn" onclick="switchTab('compras')" id="tab-compras">
         <i class="ph ph-truck"></i> Compras
     </button>
+    <button class="tab-btn" onclick="switchTab('financeiro')" id="tab-financeiro">
+        <i class="ph ph-bank"></i> Financeiro
+    </button>
 </div>
 
 <style>
@@ -250,6 +253,41 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
     </div>
 </div>
 
+<!-- ===== ABA FINANCEIRO (NOVO FASE 3) ===== -->
+<div id="panel-financeiro" class="tab-panel">
+    <!-- DRE Resumido -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div class="glass" style="padding:1.25rem; border-bottom:4px solid var(--accent);">
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700;">RECEITA BRUTA</div>
+            <div id="fin-revenue" style="font-size:1.5rem; font-weight:800; color:var(--accent);">R$ 0,00</div>
+        </div>
+        <div class="glass" style="padding:1.25rem; border-bottom:4px solid var(--secondary);">
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700;">CUSTO DE MERCADORIA (CMV)</div>
+            <div id="fin-cost" style="font-size:1.5rem; font-weight:800; color:var(--secondary);">R$ 0,00</div>
+        </div>
+        <div class="glass" style="padding:1.25rem; border-bottom:4px solid #f59e0b;">
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700;">COMISSÕES</div>
+            <div id="fin-commissions" style="font-size:1.5rem; font-weight:800; color:#f59e0b;">R$ 0,00</div>
+        </div>
+        <div class="glass" style="padding:1.25rem; border-bottom:4px solid #10b981; background:rgba(16,185,129,0.05);">
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700;">LUCRO LÍQUIDO ESTIMADO</div>
+            <div id="fin-profit" style="font-size:1.5rem; font-weight:800; color:#10b981;">R$ 0,00</div>
+            <div id="fin-margin" style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">Margem: 0%</div>
+        </div>
+    </div>
+
+    <!-- Performance de Vendedores -->
+    <div class="glass" style="padding:1.25rem;">
+        <div style="font-weight:700; font-size:0.9rem; margin-bottom:1rem;"><i class="ph ph-medal" style="color:#f59e0b;"></i> Performance da Equipe</div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>VENDEDOR</th><th>VENDAS</th><th>TOTAL VENDIDO</th><th>% COMISSÃO</th><th>COMISSÃO A PAGAR</th></tr></thead>
+                <tbody id="sellers-tbody"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Selecione um período...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Nova Compra (Entrada de Estoque) -->
 <div id="purchase-modal" style="display:none; position:fixed; inset:0; z-index:10003; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:1rem;">
     <div class="glass" style="max-width:600px; width:100%; padding:2rem; border-radius:20px; max-height:90vh; overflow-y:auto;">
@@ -416,11 +454,42 @@ tbody tr:hover { background:rgba(99,102,241,0.08); }
         btn.textContent = 'Finalizar Entrada';
     }
 
+    /* ---------- FINANCEIRO (FASE 3) ---------- */
+    async function loadFinanceiro(qs) {
+        // Carrega DRE
+        const resFin = await fetch(`/api/reports/financial?${qs}`);
+        const fin = await resFin.json();
+        document.getElementById('fin-revenue').textContent = br(fin.revenue);
+        document.getElementById('fin-cost').textContent = br(fin.cost_of_goods);
+        document.getElementById('fin-commissions').textContent = br(fin.commissions);
+        document.getElementById('fin-profit').textContent = br(fin.net_profit);
+        document.getElementById('fin-margin').textContent = `Margem: ${fin.margin.toFixed(1)}%`;
+
+        // Carrega Performance Vendedores
+        const resSel = await fetch(`/api/reports/commissions?${qs}`);
+        const sellers = await resSel.json();
+        document.getElementById('sellers-tbody').innerHTML = sellers.map(s => `
+            <tr>
+                <td style="font-weight:600;">${s.name}</td>
+                <td>${s.count} pedidos</td>
+                <td style="font-weight:700;">${br(s.total_sold)}</td>
+                <td style="color:var(--text-muted);">${s.rate}%</td>
+                <td style="font-weight:700; color:#f59e0b;">${br(s.commission)}</td>
+            </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text-muted);">Nenhuma venda com vendedor neste período.</td></tr>';
+    }
+
     async function loadAll() {
         const start = document.getElementById('start-date').value;
         const end   = document.getElementById('end-date').value;
         const qs    = `start_date=${start}&end_date=${end}`;
-        await Promise.all([loadVendas(qs), loadProdutos(qs), loadClientes(qs), loadEstoque(), loadPurchases()]);
+        await Promise.all([
+            loadVendas(qs), 
+            loadProdutos(qs), 
+            loadClientes(qs), 
+            loadEstoque(), 
+            loadPurchases(),
+            loadFinanceiro(qs)
+        ]);
     }
 
     /* ---------- VENDAS ---------- */

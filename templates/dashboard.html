@@ -80,6 +80,21 @@
         <div class="widget-value" id="val-vendas-hoje">R$ 0,00</div>
     </div>
 
+    <!-- Meta Mensal (NOVO FASE 3) -->
+    <div class="glass glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <div class="widget-title">Meta do Mês</div>
+            <div id="goal-percent" style="font-weight: 800; color: var(--accent); font-size: 0.9rem;">0%</div>
+        </div>
+        <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; border: 1px solid var(--glass-border);">
+            <div id="goal-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
+            <span id="goal-current">R$ 0,00</span>
+            <span id="goal-target" style="color: var(--text-muted);">R$ 0,00</span>
+        </div>
+    </div>
+
     <!-- ALERTAS DE ESTOQUE (NOVO FASE 2) -->
     <div class="glass glass-card" id="card-low-stock" style="display: none; border-color: rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.05);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -572,6 +587,17 @@
         }
         window.checkCashStatus = checkCashStatus;
 
+        async function loadGoal() {
+            try {
+                const res = await fetch('/api/goals/current');
+                const data = await res.json();
+                document.getElementById('goal-percent').innerText = `${data.percent.toFixed(0)}%`;
+                document.getElementById('goal-progress-bar').style.width = `${Math.min(100, data.percent)}%`;
+                document.getElementById('goal-current').innerText = `R$ ${data.current.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                document.getElementById('goal-target').innerText = `R$ ${data.target.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            } catch (e) {}
+        }
+
         async function loadLowStock() {
             try {
                 const res = await fetch('/api/reports/low-stock');
@@ -589,6 +615,13 @@
                 } else { card.style.display = 'none'; }
             } catch (e) {}
         }
+
+        // Execução inicial
+        loadStats();
+        loadChart();
+        checkCashStatus();
+        loadLowStock();
+        loadGoal();
     }
 </script>
 

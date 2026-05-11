@@ -379,6 +379,11 @@ class VariationSchema(BaseModel):
     price: Optional[float] = None
     cost: Optional[float] = None
 
+class SalesGoalCreate(BaseModel):
+    month: int
+    year: int
+    target_value: float
+
 class CategoryCreate(BaseModel):
     name: str
 
@@ -1806,6 +1811,128 @@ def generate_labels(product_id: int, qty: int = 1, db: Session = Depends(get_db)
     """
     full_html = f"<html><body><div style='display:flex; flex-wrap:wrap;'>{''.join([label_html for _ in range(qty)])}</div><script>window.print()</script></body></html>"
     return HTMLResponse(full_html)
+
+# --- FASE 3: METAS E FINANCEIRO ---
+
+@app.get("/api/goals/current")
+def get_current_goal(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    now = get_manaus_time()
+    goal = db.query(SalesGoal).filter(
+        SalesGoal.company_id == cid,
+        SalesGoal.month == now.month,
+        SalesGoal.year == now.year
+    ).first()
+    
+    # Progresso atual
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_revenue = db.query(func.sum(Sale.total_amount)).filter(
+        Sale.company_id == cid,
+        Sale.date >= month_start,
+        Sale.status != "cancelled"
+    ).scalar() or 0.0
+    
+    return {
+        "target": goal.target_value if goal else 0.0,
+        "current": current_revenue,
+        "percent": (current_revenue / goal.target_value * 100) if goal and goal.target_value > 0 else 0
+    }
+
+@app.post("/api/goals")
+def save_goal(request: Request, data: SalesGoalCreate, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    goal = db.query(SalesGoal).filter(
+        SalesGoal.company_id == cid,
+        SalesGoal.month == data.month,
+        SalesGoal.year == data.year
+    ).first()
+    
+    if goal:
+        goal.target_value = data.target_value
+    else:
+        goal = SalesGoal(
+            company_id=cid,
+            month=data.month,
+            year=data.year,
+            target_value=data.target_value
+        )
+        db.add(goal)
+    
+    db.commit()
+    return {"success": True}
+
+@app.get("/api/reports/financial")
+def get_financial_report(request: Request, start_date: str, end_date: str, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    # Filtro de data
+    s_dt = datetime.fromisoformat(start_date).replace(hour=0, minute=0, second=0)
+    e_dt = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+    
+    sales = db.query(Sale).filter(
+        Sale.company_id == cid,
+        Sale.date >= s_dt,
+        Sale.date <= e_dt,
+        Sale.status != "cancelled"
+    ).all()
+    
+    gross_revenue = sum(s.total_amount for s in sales)
+    total_discounts = sum(s.discount for s in sales)
+    total_fees = sum(s.delivery_fee for s in sales)
+    
+    total_cost = 0.0
+    total_commissions = 0.0
+    
+    for s in sales:
+        # Soma custos dos itens
+        for item in s.items:
+            total_cost += (item.cost_price or 0.0) * item.quantity
+        
+        # Calcula comissão se houver vendedor
+        if s.seller_id and s.seller:
+            total_commissions += (s.total_amount * (s.seller.commission_rate / 100))
+            
+    net_profit = gross_revenue - total_cost - total_commissions
+    
+    return {
+        "revenue": gross_revenue,
+        "discounts": total_discounts,
+        "delivery_fees": total_fees,
+        "cost_of_goods": total_cost,
+        "commissions": total_commissions,
+        "net_profit": net_profit,
+        "margin": (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
+    }
+
+@app.get("/api/reports/commissions")
+def get_commissions_report(request: Request, start_date: str, end_date: str, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    s_dt = datetime.fromisoformat(start_date).replace(hour=0, minute=0, second=0)
+    e_dt = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+    
+    sellers = db.query(Seller).filter(Seller.company_id == cid).all()
+    report = []
+    
+    for sel in sellers:
+        sales = db.query(Sale).filter(
+            Sale.seller_id == sel.id,
+            Sale.date >= s_dt,
+            Sale.date <= e_dt,
+            Sale.status != "cancelled"
+        ).all()
+        
+        total_sold = sum(s.total_amount for s in sales)
+        commission = total_sold * (sel.commission_rate / 100)
+        
+        report.append({
+            "id": sel.id,
+            "name": sel.name,
+            "rate": sel.commission_rate,
+            "count": len(sales),
+            "total_sold": total_sold,
+            "commission": commission
+        })
+        
+    return report
 
 # --- HEALTH CHECK ---
 

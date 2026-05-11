@@ -268,6 +268,24 @@
         </div>
         <div id="suppliers-list" style="display:grid; gap:0.5rem;"></div>
     </div>
+
+    <!-- META MENSAL (FASE 3) -->
+    <div class="glass" style="padding:1.5rem; border:1px solid rgba(16,185,129,0.2);">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+            <div style="width:40px; height:40px; background:rgba(16,185,129,0.1); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="fas fa-bullseye" style="color:var(--accent);"></i>
+            </div>
+            <div>
+                <h3 style="font-size:1rem; margin-bottom:0.1rem;">Meta Mensal</h3>
+                <p style="font-size:0.75rem; color:var(--text-muted);">Defina o objetivo de faturamento</p>
+            </div>
+        </div>
+        <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+            <input type="number" id="conf-goal-value" placeholder="Ex: 50000" style="flex:1; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-weight:700;">
+            <button onclick="saveMonthlyGoal()" class="btn btn-primary" style="padding:0.7rem 1.25rem;"><i class="fas fa-save"></i> Salvar</button>
+        </div>
+        <p style="font-size:0.65rem; color:var(--text-muted);">Esta meta será usada para calcular o progresso no Dashboard.</p>
+    </div>
 </div>
 
 <script>
@@ -584,12 +602,39 @@
         loadSuppliers();
     }
 
+    // --- METAS (FASE 3) ---
+    async function loadMonthlyGoal() {
+        const now = new Date();
+        const res = await fetch('/api/goals/current');
+        const data = await res.json();
+        if (data.target) {
+            document.getElementById('conf-goal-value').value = data.target;
+        }
+    }
+
+    async function saveMonthlyGoal() {
+        const val = parseFloat(document.getElementById('conf-goal-value').value);
+        if (isNaN(val)) return alert('Digite um valor válido.');
+        const now = new Date();
+        const res = await fetch('/api/goals', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                month: now.getMonth() + 1,
+                year: now.getFullYear(),
+                target_value: val
+            })
+        });
+        if (res.ok) alert('✅ Meta salva com sucesso!');
+        else alert('Erro ao salvar meta.');
+    }
+
     loadSettings();
     loadSlug();
     loadCoupons();
     loadLoyalty();
     loadSellers();
     loadSuppliers();
+    loadMonthlyGoal();
     pollStatus();
 </script>
 {% endblock %}

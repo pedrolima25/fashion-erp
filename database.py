@@ -322,6 +322,16 @@ class Exchange(Base):
     date = Column(DateTime(timezone=True), default=get_manaus_time)
     sale = relationship("Sale")
 
+class SalesGoal(Base):
+    """Metas de Vendas Mensais"""
+    __tablename__ = "sales_goals"
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    month = Column(Integer) # 1-12
+    year = Column(Integer)
+    target_value = Column(Float, default=0.0)
+    created_at = Column(DateTime(timezone=True), default=get_manaus_time)
+
 # --- UTILS & INITIAL DATA ---
 
 def populate_initial_data(db):
