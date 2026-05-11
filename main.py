@@ -1214,21 +1214,43 @@ def get_customer_history(customer_id: int, request: Request, db: Session = Depen
 def get_reports_summary(request: Request, start_date: str = None, end_date: str = None, db: Session = Depends(get_db)):
     cid = request.session.get("company_id")
     query = db.query(Sale).filter(Sale.company_id == cid, Sale.status != "cancelled")
+    dt_start = None
+    dt_end = None
     if start_date:
-        query = query.filter(Sale.date >= datetime.strptime(start_date, "%Y-%m-%d"))
+        dt_start = datetime.strptime(start_date, "%Y-%m-%d")
+        query = query.filter(Sale.date >= dt_start)
     if end_date:
-        query = query.filter(Sale.date < datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1))
+        dt_end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+        query = query.filter(Sale.date < dt_end)
     sales = query.all()
     total_revenue = sum(s.total_amount for s in sales)
-    total_cost = sum(
-        sum((item.cost_price or 0) * item.quantity for item in s.items) for s in sales
-    )
+    total_discount = sum(s.discount for s in sales)
+    total_freight = sum(s.delivery_fee or 0 for s in sales)
+    # Metodos de pagamento
+    pay_map = {}
+    for s in sales:
+        m = s.payment_method or "Outro"
+        pay_map[m] = pay_map.get(m, 0) + s.total_amount
+    payment_methods = [{"metodo": k, "total": v} for k, v in sorted(pay_map.items(), key=lambda x: x[1], reverse=True)]
+    # Logistica
+    delivery_count = sum(1 for s in sales if s.delivery_type == "delivery")
+    pickup_count = sum(1 for s in sales if s.delivery_type != "delivery")
+    # Dados diarios
+    daily_map = {}
+    for s in sales:
+        dia = s.date.astimezone(manaus_tz).strftime("%d/%m")
+        daily_map[dia] = daily_map.get(dia, 0) + s.total_amount
+    daily = [{"dia": k, "total": v} for k, v in daily_map.items()]
     return {
-        "total_sales": len(sales),
+        "total_orders": len(sales),
         "total_revenue": total_revenue,
-        "total_cost": total_cost,
-        "profit": total_revenue - total_cost,
-        "avg_ticket": total_revenue / len(sales) if sales else 0
+        "ticket_medio": total_revenue / len(sales) if sales else 0,
+        "total_discount": total_discount,
+        "total_freight": total_freight,
+        "payment_methods": payment_methods,
+        "delivery_count": delivery_count,
+        "pickup_count": pickup_count,
+        "daily": daily
     }
 
 @app.get("/api/reports/sales")
@@ -1246,6 +1268,7 @@ def get_sales_report(request: Request, start_date: str = None, end_date: str = N
         "cliente": s.customer.name if s.customer else "Consumidor",
         "total": s.total_amount,
         "metodo": s.payment_method,
+        "logistica": s.delivery_type or "pickup",
         "status": s.status
     } for s in sales]
 
@@ -1260,12 +1283,22 @@ def get_products_report(request: Request, start_date: str = None, end_date: str 
     items = query.all()
     product_map = {}
     for item in items:
-        pid = item.product_id
-        if pid not in product_map:
-            product_map[pid] = {"name": item.product.name if item.product else "Produto", "qty": 0, "revenue": 0}
-        product_map[pid]["qty"] += item.quantity
-        product_map[pid]["revenue"] += item.unit_price * item.quantity
-    return sorted(product_map.values(), key=lambda x: x["revenue"], reverse=True)
+        key = f"{item.product_id}_{item.variation_id or 0}"
+        if key not in product_map:
+            product_map[key] = {
+                "nome": item.product.name if item.product else "Produto",
+                "tamanho": item.variation.size if item.variation else "-",
+                "qtd": 0, "receita": 0, "custo": 0
+            }
+        product_map[key]["qtd"] += item.quantity
+        product_map[key]["receita"] += item.unit_price * item.quantity
+        product_map[key]["custo"] += (item.cost_price or 0) * item.quantity
+    result = []
+    for p in product_map.values():
+        lucro = p["receita"] - p["custo"]
+        margem = (lucro / p["receita"] * 100) if p["receita"] > 0 else 0
+        result.append({**p, "lucro": lucro, "margem": margem})
+    return sorted(result, key=lambda x: x["receita"], reverse=True)
 
 @app.get("/api/reports/customers")
 def get_customers_report(request: Request, start_date: str = None, end_date: str = None, db: Session = Depends(get_db)):
@@ -1280,10 +1313,22 @@ def get_customers_report(request: Request, start_date: str = None, end_date: str
     for s in sales:
         cid_c = s.customer_id
         if cid_c not in cust_map:
-            cust_map[cid_c] = {"name": s.customer.name if s.customer else "?", "orders": 0, "total": 0}
-        cust_map[cid_c]["orders"] += 1
+            cust_map[cid_c] = {
+                "nome": s.customer.name if s.customer else "?",
+                "telefone": s.customer.phone if s.customer else "-",
+                "pedidos": 0, "total": 0, "ultima_data": s.date
+            }
+        cust_map[cid_c]["pedidos"] += 1
         cust_map[cid_c]["total"] += s.total_amount
-    return sorted(cust_map.values(), key=lambda x: x["total"], reverse=True)
+        if s.date > cust_map[cid_c]["ultima_data"]:
+            cust_map[cid_c]["ultima_data"] = s.date
+    result = []
+    for c in cust_map.values():
+        c["ticket_medio"] = c["total"] / c["pedidos"] if c["pedidos"] else 0
+        c["ultima_compra"] = c["ultima_data"].astimezone(manaus_tz).strftime("%d/%m/%Y")
+        del c["ultima_data"]
+        result.append(c)
+    return sorted(result, key=lambda x: x["total"], reverse=True)
 
 @app.get("/api/reports/stock")
 def get_stock_report(request: Request, db: Session = Depends(get_db)):
@@ -1291,8 +1336,18 @@ def get_stock_report(request: Request, db: Session = Depends(get_db)):
     products = db.query(Product).filter(Product.company_id == cid, Product.active == True).all()
     res = []
     for p in products:
+        cat_name = p.category.name if p.category else "-"
         for v in p.variations:
-            res.append({"product": p.name, "size": v.size, "color": v.color or "-", "stock": v.stock_quantity})
+            price = v.price_override or p.base_price
+            cost = v.cost_price_override or p.cost_price or 0
+            stk = v.stock_quantity
+            status = "esgotado" if stk == 0 else ("baixo" if stk <= 3 else "ok")
+            res.append({
+                "produto": p.name, "categoria": cat_name,
+                "tamanho": v.size or "-", "cor": v.color or "-",
+                "estoque": stk, "preco": price, "custo": cost,
+                "valor_estoque": price * stk, "status": status
+            })
     return res
 
 # --- DELIVERY API ---
