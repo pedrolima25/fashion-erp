@@ -124,24 +124,24 @@
             <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;">
         </div>
 
-        <!-- Logística e Pagamento -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
-            <div>
-                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">LOGÍSTICA</label>
-                <select id="delivery-type" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;" onchange="toggleAddressField(this.value)">
-                    <option value="pickup">🏪 Retirada</option>
-                    <option value="delivery">🛵 Entrega</option>
-                </select>
+        <!-- Logística -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">LOGÍSTICA</label>
+            <select id="delivery-type" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;" onchange="toggleAddressField(this.value)">
+                <option value="pickup">🏪 Retirada</option>
+                <option value="delivery">🛵 Entrega</option>
+            </select>
+        </div>
+
+        <!-- Pagamento Misto -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">PAGAMENTO</label>
+            <div id="payment-entries" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;">
+                <!-- Entradas de pagamento injetadas aqui -->
             </div>
-            <div>
-                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">PAGAMENTO</label>
-                <select id="payment-method" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;">
-                    <option value="PIX">💠 PIX</option>
-                    <option value="Cartão">💳 Cartão</option>
-                    <option value="Dinheiro">💵 Dinheiro</option>
-                    <option value="Crediário">📋 Crediário</option>
-                </select>
-            </div>
+            <button onclick="addPaymentEntry()" class="btn-tiny" style="width:100%; padding:6px; background:rgba(99,102,241,0.1); color:var(--primary-light); border-color:rgba(99,102,241,0.2);">
+                <i class="ph ph-plus"></i> Adicionar Forma de Pagamento
+            </button>
         </div>
 
         <!-- Endereço de entrega -->
@@ -166,29 +166,70 @@
 
         <!-- Totais -->
         <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:0.75rem; margin-bottom:0.75rem;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.35rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.6rem;">
                 <span style="color:var(--text-muted);">Subtotal</span>
                 <span id="cart-subtotal">R$ 0,00</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:0.35rem;">
-                <span style="color:var(--secondary);">Desconto R$</span>
-                <input type="number" id="cart-discount" value="0" min="0" step="0.5" style="width:70px; text-align:right; background:transparent; border:none; border-bottom:1px solid var(--secondary); color:var(--secondary); font-weight:600; font-size:0.85rem; padding:0 4px;" onchange="updateCartTotals()">
+            
+            <!-- Botões de Desconto Rápido -->
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:0.75rem;">
+                <button onclick="applyQuickDiscount(5, 'percent')" class="btn-tiny">5%</button>
+                <button onclick="applyQuickDiscount(10, 'percent')" class="btn-tiny">10%</button>
+                <button onclick="applyQuickDiscount(5, 'value')" class="btn-tiny">R$5</button>
+                <button onclick="applyQuickDiscount(10, 'value')" class="btn-tiny">R$10</button>
             </div>
-            <div id="cart-fee-row" style="display:none; justify-content:space-between; font-size:0.85rem; margin-bottom:0.35rem;">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; margin-bottom:0.4rem;">
+                <span style="color:var(--secondary); font-weight:700;">Desconto R$</span>
+                <input type="number" id="cart-discount" value="0" min="0" step="0.5" style="width:80px; text-align:right; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.2); border-radius:6px; color:var(--secondary); font-weight:800; font-size:0.9rem; padding:4px 8px;" onchange="updateCartTotals()">
+            </div>
+            
+            <div id="cart-fee-row" style="display:none; justify-content:space-between; font-size:0.85rem; margin-bottom:0.4rem;">
                 <span style="color:var(--text-muted);">Frete</span>
                 <span id="cart-fee-display">R$ 0,00</span>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; padding-top:0.5rem; border-top:1px solid var(--glass-border); margin-top:0.25rem;">
-                <span>Total</span>
-                <span id="cart-total" style="color:var(--accent);">R$ 0,00</span>
+            <div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:900; padding-top:0.75rem; border-top:1px solid var(--glass-border); margin-top:0.25rem;">
+                <span style="letter-spacing:-0.5px;">TOTAL</span>
+                <span id="cart-total" style="color:var(--accent); text-shadow:0 0 15px rgba(16,185,129,0.3);">R$ 0,00</span>
             </div>
         </div>
 
-        <button onclick="finalizeSale()" id="btn-finalize" class="btn btn-primary" style="width:100%; justify-content:center; height:48px; font-size:1rem; font-weight:700;">
-            <i class="ph ph-check-circle"></i> Finalizar Venda
+        <button onclick="finalizeSale()" id="btn-finalize" class="btn btn-primary" style="width:100%; justify-content:center; height:54px; font-size:1.1rem; font-weight:800; border-radius:12px; box-shadow:0 10px 20px -5px rgba(99,102,241,0.4);">
+            <i class="ph ph-check-circle" style="font-size:1.4rem;"></i> FINALIZAR (F2)
         </button>
+        
+        <div style="display:flex; justify-content:center; gap:15px; margin-top:1rem; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+            <span><b style="color:var(--primary);">F1</b> BUSCAR</span>
+            <span><b style="color:var(--primary);">F2</b> FINALIZAR</span>
+            <span><b style="color:var(--primary);">ESC</b> LIMPAR</span>
+        </div>
     </div>
 </div>
+
+<style>
+    .btn-tiny {
+        padding: 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-tiny:hover {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    /* Estilo para impressão do cupom */
+    @media print {
+        body * { visibility: hidden; }
+        #receipt-content-print, #receipt-content-print * { visibility: visible; }
+        #receipt-content-print { position: absolute; left: 0; top: 0; width: 80mm; padding: 0; margin: 0; background: white; color: black; }
+    }
+</style>
 
 <!-- Modal de Variações -->
 <div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 420px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
@@ -258,9 +299,34 @@
 
 <script>
     let products = [];
-    let cart = [];
+    let cart = JSON.parse(localStorage.getItem('pdv_cart') || '[]');
     let activeProduct = null;
     let currentReceiptSaleId = null;
+
+    // Atalhos de Teclado
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F1') {
+            e.preventDefault();
+            document.getElementById('search-product').focus();
+        }
+        if (e.key === 'F2') {
+            e.preventDefault();
+            finalizeSale();
+        }
+        if (e.key === 'Escape') {
+            if (document.getElementById('variation-modal').style.display === 'block') {
+                closeModal();
+            } else if (cart.length > 0 && confirm('Limpar carrinho?')) {
+                cart = [];
+                saveCart();
+                renderCart();
+            }
+        }
+    });
+
+    function saveCart() {
+        localStorage.setItem('pdv_cart', JSON.stringify(cart));
+    }
 
     async function loadProducts() {
         try {
@@ -304,7 +370,7 @@
 
             const stockBadge = !hasStock
                 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">ESGOTADO</span>`
-                : (totalStock <= 3 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Ult. ${totalStock}</span>` : '');
+                : (totalStock <= 3 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Ult. ${totalStock}</span>` : `<span style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.1);backdrop-filter:blur(4px);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Est: ${totalStock}</span>`);
 
             card.innerHTML = `
                 ${imgHtml}
@@ -353,6 +419,7 @@
         const existing = cart.find(item => item.product_id === p.id && !item.variation_id);
         if (existing) { existing.quantity++; }
         else { cart.push({ product_id: p.id, variation_id: null, name: p.name, size: '', color: '', price: p.price, quantity: 1 }); }
+        saveCart();
         renderCart();
     }
 
@@ -365,6 +432,7 @@
         const existing = cart.find(item => item.variation_id === v.id);
         if (existing) { existing.quantity++; }
         else { cart.push({ product_id: p.id, variation_id: v.id, name: p.name, size: v.size, color: v.color || '', price: v.price || p.price, quantity: 1 }); }
+        saveCart();
         renderCart();
         closeModal();
     }
@@ -402,12 +470,26 @@
 
     function changeQty(index, delta) {
         cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+        saveCart();
         renderCart();
     }
 
     function removeFromCart(index) {
         cart.splice(index, 1);
+        saveCart();
         renderCart();
+    }
+
+    function applyQuickDiscount(val, type) {
+        const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        let disc = 0;
+        if (type === 'percent') {
+            disc = (subtotal * val) / 100;
+        } else {
+            disc = val;
+        }
+        document.getElementById('cart-discount').value = disc.toFixed(2);
+        updateCartTotals();
     }
 
     function updateCartTotals() {
@@ -429,8 +511,70 @@
         }
     }
 
+    let payments = [{ method: 'Dinheiro', amount: 0 }];
+
+    function addPaymentEntry() {
+        payments.push({ method: 'PIX', amount: 0 });
+        renderPayments();
+    }
+
+    function removePaymentEntry(index) {
+        if (payments.length > 1) {
+            payments.splice(index, 1);
+            renderPayments();
+        }
+    }
+
+    function renderPayments() {
+        const container = document.getElementById('payment-entries');
+        container.innerHTML = '';
+        const totalToPay = calculateCurrentTotal();
+        const paidSoFar = payments.reduce((s, p) => s + p.amount, 0);
+        const remaining = Math.max(0, totalToPay - paidSoFar);
+
+        payments.forEach((p, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 32px; gap:6px; align-items:center;';
+            div.innerHTML = `
+                <select onchange="updatePaymentMethod(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background:var(--bg); color:white; font-size:0.8rem;">
+                    <option value="Dinheiro" ${p.method==='Dinheiro'?'selected':''}>💵 Dinheiro</option>
+                    <option value="PIX" ${p.method==='PIX'?'selected':''}>💠 PIX</option>
+                    <option value="Cartão" ${p.method==='Cartão'?'selected':''}>💳 Cartão</option>
+                    <option value="Crediário" ${p.method==='Crediário'?'selected':''}>📋 Crediário</option>
+                </select>
+                <input type="number" value="${p.amount}" step="0.01" onchange="updatePaymentAmount(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem; text-align:right;">
+                <button onclick="removePaymentEntry(${index})" style="background:none; border:none; color:var(--secondary); cursor:pointer;"><i class="ph ph-trash"></i></button>
+            `;
+            container.appendChild(div);
+        });
+        
+        // Se houver apenas um pagamento e o valor for 0, sugere o total
+        if (payments.length === 1 && payments[0].amount === 0) {
+            payments[0].amount = totalToPay;
+            renderPayments();
+        }
+    }
+
+    function updatePaymentMethod(index, val) { payments[index].method = val; }
+    function updatePaymentAmount(index, val) { payments[index].amount = parseFloat(val) || 0; }
+
+    function calculateCurrentTotal() {
+        const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+        const isDelivery = document.getElementById('delivery-type').value === 'delivery';
+        const fee = isDelivery ? (parseFloat(document.getElementById('delivery-fee').value) || 0) : 0;
+        return Math.max(0, subtotal - discount + fee);
+    }
+
     async function finalizeSale() {
+        const totalToPay = calculateCurrentTotal();
+        const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+
         if (cart.length === 0) { alert('Adicione produtos ao carrinho.'); return; }
+        if (Math.abs(totalPaid - totalToPay) > 0.01) { 
+            alert(`O total pago (R$ ${totalPaid.toFixed(2)}) não confere com o total da venda (R$ ${totalToPay.toFixed(2)}).`); 
+            return; 
+        }
 
         const btn = document.getElementById('btn-finalize');
         btn.disabled = true;
@@ -446,7 +590,7 @@
                 quantity: item.quantity,
                 price: item.price
             })),
-            payment_method: document.getElementById('payment-method').value,
+            payments: payments, // Novo: lista de pagamentos
             seller_id: parseInt(document.getElementById('sale-seller').value) || null,
             discount: parseFloat(document.getElementById('cart-discount').value) || 0,
             delivery_type: deliveryType,
@@ -467,16 +611,18 @@
             const data = await res.json();
             if (data.success) {
                 currentReceiptSaleId = data.sale_id;
+                cart = [];
+                saveCart();
                 await showReceipt(data.sale_id);
             } else {
                 alert(data.error || 'Erro ao finalizar venda.');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
+                btn.innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
             }
         } catch (e) {
             alert('Falha na conexão.');
             btn.disabled = false;
-            btn.innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
+            btn.innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
         }
     }
 
@@ -520,21 +666,80 @@
             document.getElementById('receipt-payment').textContent = sale.payment_method;
             document.getElementById('receipt-delivery-type').textContent = sale.delivery_type === 'delivery' ? '🛵 Entrega' : '🏪 Retirada';
 
+            // Gerar cupom para impressão
+            generatePrintContent(sale);
+            
             document.getElementById('receipt-modal').style.display = 'flex';
         } catch(e) {
             newSale();
         }
     }
 
-    function printCurrentReceipt() {
-        if (currentReceiptSaleId) {
-            window.open(`/api/sales/${currentReceiptSaleId}/receipt`, '_blank');
+    function generatePrintContent(sale) {
+        let printDiv = document.getElementById('receipt-content-print');
+        if (!printDiv) {
+            printDiv = document.createElement('div');
+            printDiv.id = 'receipt-content-print';
+            document.body.appendChild(printDiv);
         }
+        
+        const itemsHtml = sale.items.map(i => `
+            <tr>
+                <td style="padding:4px 0;">${i.nome} ${i.tamanho||''}</td>
+                <td style="text-align:center;">${i.qtd}</td>
+                <td style="text-align:right;">${i.total.toFixed(2)}</td>
+            </tr>
+        `).join('');
+
+        printDiv.innerHTML = `
+            <div style="font-family:'Courier New', Courier, monospace; font-size:12px; width:80mm; padding:10px; background:white; color:black;">
+                <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">FASHION ERP</div>
+                <div style="text-align:center; margin-bottom:10px; border-bottom:1px dashed black; padding-bottom:10px;">COMPROVANTE DE VENDA</div>
+                
+                <div style="margin-bottom:10px;">
+                    <b>Pedido:</b> #${sale.id}<br>
+                    <b>Data:</b> ${sale.date}<br>
+                    ${sale.customer ? `<b>Cliente:</b> ${sale.customer.name}<br>` : ''}
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:10px; border-bottom:1px dashed black;">
+                    <thead>
+                        <tr style="border-bottom:1px dashed black;">
+                            <th style="text-align:left; padding-bottom:5px;">ITEM</th>
+                            <th style="text-align:center; padding-bottom:5px;">QTD</th>
+                            <th style="text-align:right; padding-bottom:5px;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                </table>
+
+                <div style="text-align:right; margin-bottom:10px;">
+                    Subtotal: R$ ${sale.items.reduce((s,i)=>s+i.total,0).toFixed(2)}<br>
+                    ${sale.discount > 0 ? `Desconto: - R$ ${sale.discount.toFixed(2)}<br>` : ''}
+                    ${sale.delivery_fee > 0 ? `Frete: R$ ${sale.delivery_fee.toFixed(2)}<br>` : ''}
+                    <b style="font-size:14px;">TOTAL: R$ ${sale.total_amount.toFixed(2)}</b>
+                </div>
+
+                <div style="border-top:1px dashed black; padding-top:10px; text-align:center;">
+                    <b>Pagamento:</b> ${sale.payment_method}<br>
+                    <b>Entrega:</b> ${sale.delivery_type === 'delivery' ? 'Entrega' : 'Retirada'}<br>
+                    <br>
+                    Obrigado pela preferência!
+                </div>
+            </div>
+        `;
+    }
+
+    function printCurrentReceipt() {
+        window.print();
     }
 
     function newSale() {
         cart = [];
+        payments = [{ method: 'Dinheiro', amount: 0 }];
+        saveCart();
         renderCart();
+        renderPayments();
         document.getElementById('cart-discount').value = 0;
         document.getElementById('delivery-fee').value = 0;
         document.getElementById('customer-name').value = '';
@@ -546,13 +751,13 @@
         toggleAddressField('pickup');
         document.getElementById('receipt-modal').style.display = 'none';
         document.getElementById('btn-finalize').disabled = false;
-        document.getElementById('btn-finalize').innerHTML = '<i class="ph ph-check-circle"></i> Finalizar Venda';
+        document.getElementById('btn-finalize').innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
         loadProducts();
     }
 
     document.getElementById('search-product').oninput = (e) => {
         const q = e.target.value.toLowerCase();
-        renderProducts(q ? products.filter(p => p.name.toLowerCase().includes(q)) : products);
+        renderProducts(q ? products.filter(p => p.name.toLowerCase().includes(q) || (p.code && p.code.toLowerCase().includes(q))) : products);
     };
 
     function toggleAddressField(val) {
@@ -656,7 +861,7 @@
             statusBar.style.display = 'flex';
             document.getElementById('cash-status-text').innerText = `Iniciado às ${data.opened_at} | Saldo: R$ ${data.opening_balance.toFixed(2)}`;
             document.getElementById('btn-finalize').disabled = false;
-            document.getElementById('btn-finalize').innerHTML = '<i class="fas fa-check"></i> Finalizar Venda';
+            document.getElementById('btn-finalize').innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
         }
     }
     checkCash();
@@ -678,5 +883,7 @@
 
     loadCategories();
     loadProducts();
+    renderCart(); // Carrega o que estiver no localStorage
+    renderPayments();
 </script>
 {% endblock %}
