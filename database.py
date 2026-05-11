@@ -223,7 +223,9 @@ class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
-    type = Column(String) # 'income' ou 'expense'
+    sale_id = Column(Integer, ForeignKey("sales.id"), nullable=True)
+    type = Column(String) # 'receita' ou 'despesa'
+    category = Column(String, nullable=True)
     amount = Column(Float)
     description = Column(String)
     payment_method = Column(String, default="PIX")
@@ -461,6 +463,12 @@ def run_migrations():
         cols_users = [c['name'] for c in inspector.get_columns('users')]
         if 'role' not in cols_users:
             conn.execute(text("ALTER TABLE users ADD COLUMN role VARCHAR DEFAULT 'admin'"))
+
+        cols_trans = [c['name'] for c in inspector.get_columns('transactions')]
+        if 'sale_id' not in cols_trans:
+            conn.execute(text("ALTER TABLE transactions ADD COLUMN sale_id INTEGER"))
+        if 'category' not in cols_trans:
+            conn.execute(text("ALTER TABLE transactions ADD COLUMN category VARCHAR"))
 
         conn.commit()
     logger.info("✨ Banco de dados sincronizado.")
