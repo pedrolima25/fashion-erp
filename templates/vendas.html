@@ -741,24 +741,45 @@
     }
 
     function newSale() {
-        cart = [];
-        payments = [{ method: 'Dinheiro', amount: 0 }];
-        saveCart();
-        renderCart();
-        renderPayments();
-        document.getElementById('cart-discount').value = 0;
-        document.getElementById('delivery-fee').value = 0;
-        document.getElementById('customer-name').value = '';
-        document.getElementById('customer-phone').value = '';
-        document.getElementById('delivery-address').value = '';
-        document.getElementById('delivery-reference').value = '';
-        document.getElementById('delivery-location-link').value = '';
-        document.getElementById('delivery-type').value = 'pickup';
-        toggleAddressField('pickup');
-        document.getElementById('receipt-modal').style.display = 'none';
-        document.getElementById('btn-finalize').disabled = false;
-        document.getElementById('btn-finalize').innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
-        loadProducts();
+        try {
+            // 1. Limpar Campos da UI primeiro
+            document.getElementById('cart-discount').value = 0;
+            const feeEl = document.getElementById('delivery-fee');
+            if (feeEl) feeEl.value = 0;
+            
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-phone').value = '';
+            document.getElementById('delivery-address').value = '';
+            document.getElementById('delivery-reference').value = '';
+            document.getElementById('delivery-location-link').value = '';
+            document.getElementById('delivery-type').value = 'pickup';
+            document.getElementById('sale-seller').value = '';
+            
+            toggleAddressField('pickup');
+
+            // 2. Limpar Variáveis de Estado
+            cart = [];
+            payments = [{ method: 'Dinheiro', amount: 0 }];
+            
+            // 3. Salvar e Renderizar
+            saveCart();
+            renderCart();
+            renderPayments();
+            
+            // 4. Fechar Modal e Resetar Botão
+            document.getElementById('receipt-modal').style.display = 'none';
+            const btn = document.getElementById('btn-finalize');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-check-circle"></i> FINALIZAR (F2)';
+            
+            // Focar na busca para próxima venda
+            document.getElementById('search-product').focus();
+        } catch (e) {
+            console.error("Erro ao resetar venda:", e);
+            // Tenta fechar o modal mesmo se der erro
+            document.getElementById('receipt-modal').style.display = 'none';
+            location.reload(); // Fallback drástico para garantir que limpe
+        }
     }
 
     document.getElementById('search-product').oninput = (e) => {
