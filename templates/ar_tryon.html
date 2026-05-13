@@ -116,34 +116,37 @@ function onResults(results) {
         const rightShoulder = results.poseLandmarks[12];
         const leftHip = results.poseLandmarks[23];
         const rightHip = results.poseLandmarks[24];
-
-        // Centro do Torso (Coordenadas Reais do Canvas)
-        const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
-        const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
-        
-        // Dimensões Seguras
         const dx = rightShoulder.x - leftShoulder.x;
         const dy = rightShoulder.y - leftShoulder.y;
-        const shoulderWidth = Math.sqrt(dx*dx + dy*dy) * canvasElement.width;
-        const torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
 
-        // Ângulo estável entre os ombros (Invertido para compensar coordenadas de tela)
+        // Centro do Torso (Média entre ombros e quadris para estabilidade total)
+        const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
+        const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+        const midHipX = (leftHip.x + rightHip.x) / 2;
+        const midHipY = (leftHip.y + rightHip.y) / 2;
+
+        const midPointX = ((midShoulderX + midHipX) / 2) * canvasElement.width;
+        const midPointY = ((midShoulderY + midHipY) / 2) * canvasElement.height;
+        
+        // Dimensões baseadas na escala corporal real
+        const shoulderWidth = Math.sqrt(dx*dx + dy*dy) * canvasElement.width;
+        const torsoHeight = Math.abs(midShoulderY - midHipY) * canvasElement.height;
+
+        // Ângulo estável
         const angle = Math.atan2(dy, dx);
 
         canvasCtx.save();
         canvasCtx.translate(midPointX, midPointY);
-        
-        // CORREÇÃO: Devido ao Mirror e Coordenadas, giramos 180 graus (Math.PI)
         canvasCtx.rotate(angle + Math.PI);
 
-        // Escalas proporcionais
-        const drawWidth = shoulderWidth * 2.2; 
-        const drawHeight = torsoHeight * 1.6;
+        // Escalas proporcionais (Ajustado para "grudar")
+        const drawWidth = shoulderWidth * 2.1; 
+        const drawHeight = torsoHeight * 1.8;
 
         canvasCtx.drawImage(
             productImg, 
             -drawWidth / 2, 
-            -drawHeight * 0.15, 
+            -drawHeight * 0.55, // Centraliza no torso
             drawWidth, 
             drawHeight
         );
@@ -163,9 +166,9 @@ const pose = new Pose({
 });
 
 pose.setOptions({
-    modelComplexity: 0, // 0 = Lite (Rápido), 1 = Full, 2 = Heavy
+    modelComplexity: 0, 
     smoothLandmarks: true,
-    enableSegmentation: false,
+    enableSegmentation: true, // Ativado para "grudar" melhor
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
