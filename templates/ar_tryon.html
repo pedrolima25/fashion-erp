@@ -81,7 +81,8 @@ const statusBadge = document.getElementById('detection-status');
 
 // Imagem do Produto (Será dinâmico)
 const productImg = new Image();
-productImg.src = "/static/placeholder_shirt.png"; // Placeholder
+productImg.crossOrigin = "anonymous"; // Evita Tainted Canvas para toDataURL
+productImg.src = "/static/placeholder_shirt.png"; 
 
 function loadNewProduct(input) {
     if (input.files && input.files[0]) {
@@ -173,17 +174,23 @@ pose.onResults(onResults);
 
 const btnSnap = document.getElementById('btn-snap');
 btnSnap.addEventListener('click', () => {
-    const dataUrl = canvasElement.toDataURL("image/png");
-    const link = document.createElement('a');
-    link.download = `meu-look-fashion-${Date.now()}.png`;
-    link.href = dataUrl;
-    link.click();
-    
-    // Feedback visual
-    btnSnap.innerHTML = '<i class="ph ph-check"></i> Foto Salva!';
-    setTimeout(() => {
-        btnSnap.innerHTML = '<i class="ph ph-camera"></i> Tirar Foto do Look';
-    }, 2000);
+    try {
+        const dataUrl = canvasElement.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.download = `look-fashion-${Date.now()}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link); // Necessário para alguns browsers
+        link.click();
+        document.body.removeChild(link);
+        
+        btnSnap.innerHTML = '<i class="ph ph-check"></i> Foto Salva!';
+        setTimeout(() => {
+            btnSnap.innerHTML = '<i class="ph ph-camera"></i> Tirar Foto do Look';
+        }, 2000);
+    } catch (e) {
+        console.error("Erro ao salvar foto:", e);
+        alert("Não foi possível salvar a foto devido a restrições de segurança do navegador. Tente usar outro navegador ou modo anônimo.");
+    }
 });
 
 const camera = new Camera(videoElement, {
