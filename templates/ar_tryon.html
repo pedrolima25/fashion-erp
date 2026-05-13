@@ -37,7 +37,9 @@
             <div style="text-align:center; margin-bottom:1rem;">
                 <span id="detection-status" class="badge" style="background:rgba(239,68,68,0.2); color:#ef4444;">Corpo não detectado</span>
             </div>
-            <button id="btn-snap" class="btn btn-primary" style="width:100%;"><i class="ph ph-camera"></i> Tirar Foto do Look</button>
+            <button id="btn-snap" class="btn btn-primary" style="width:100%; margin-bottom:0.5rem;"><i class="ph ph-camera"></i> Tirar Foto do Look</button>
+            <input type="file" id="file-upload" style="display:none;" accept="image/*" onchange="loadNewProduct(this)">
+            <button onclick="document.getElementById('file-upload').click()" class="btn btn-secondary" style="width:100%; border-style:dashed;"><i class="ph ph-plus"></i> Adicionar Sua Roupa</button>
         </div>
     </div>
 </div>
@@ -81,6 +83,16 @@ const statusBadge = document.getElementById('detection-status');
 const productImg = new Image();
 productImg.src = "/static/placeholder_shirt.png"; // Placeholder
 
+function loadNewProduct(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            productImg.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 function onResults(results) {
     if (loadingOverlay.style.display !== 'none') {
         console.log("MediaPipe pronto! Recebendo frames...");
@@ -98,20 +110,26 @@ function onResults(results) {
         statusBadge.style.background = "rgba(16,185,129,0.2)";
         statusBadge.style.color = "#10b981";
 
-        // Lógica de Sobreposição (Simplified for demo)
+        // Lógica de Sobreposição Aprimorada
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
+        const leftHip = results.poseLandmarks[23];
+        const rightHip = results.poseLandmarks[24];
+
         const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
         const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
         
         const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x) * canvasElement.width;
-        const drawWidth = shoulderWidth * 2.5; // Escala da roupa
-        const drawHeight = drawWidth * 1.2;
+        const bodyHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
 
+        const drawWidth = shoulderWidth * 2.2; 
+        const drawHeight = bodyHeight * 1.5;
+
+        // Desenhar a roupa um pouco mais abaixo (offset do pescoço)
         canvasCtx.drawImage(
             productImg, 
             midPointX - drawWidth / 2, 
-            midPointY - drawHeight * 0.2, 
+            midPointY - (drawHeight * 0.1), // Ajustado para não cobrir o rosto
             drawWidth, 
             drawHeight
         );
