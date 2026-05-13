@@ -110,7 +110,7 @@ function onResults(results) {
         statusBadge.style.background = "rgba(16,185,129,0.2)";
         statusBadge.style.color = "#10b981";
 
-        // Lógica de Sobreposição Corrigida (Anti-Inversão)
+        // Lógica de Sobreposição Corrigida (Anti-Inversão Total)
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
         const leftHip = results.poseLandmarks[23];
@@ -121,29 +121,28 @@ function onResults(results) {
         const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
         
         // Dimensões Seguras
-        const shoulderWidth = Math.sqrt(
-            Math.pow(rightShoulder.x - leftShoulder.x, 2) + 
-            Math.pow(rightShoulder.y - leftShoulder.y, 2)
-        ) * canvasElement.width;
-        
+        const dx = rightShoulder.x - leftShoulder.x;
+        const dy = rightShoulder.y - leftShoulder.y;
+        const shoulderWidth = Math.sqrt(dx*dx + dy*dy) * canvasElement.width;
         const torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
 
-        // Ângulo estável entre os ombros
-        const angle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
+        // Ângulo estável entre os ombros (Invertido para compensar coordenadas de tela)
+        const angle = Math.atan2(dy, dx);
 
         canvasCtx.save();
         canvasCtx.translate(midPointX, midPointY);
-        // Se a câmera estiver espelhada, o ângulo pode inverter. Compensamos aqui:
-        canvasCtx.rotate(angle);
+        
+        // CORREÇÃO: Devido ao Mirror e Coordenadas, giramos 180 graus (Math.PI)
+        canvasCtx.rotate(angle + Math.PI);
 
-        // Escalas proporcionais (evita ficar gigante)
-        const drawWidth = shoulderWidth * 2.0; 
-        const drawHeight = torsoHeight * 1.4;
+        // Escalas proporcionais
+        const drawWidth = shoulderWidth * 2.2; 
+        const drawHeight = torsoHeight * 1.6;
 
         canvasCtx.drawImage(
             productImg, 
             -drawWidth / 2, 
-            -drawHeight * 0.15, // Posiciona logo abaixo do pescoço
+            -drawHeight * 0.15, 
             drawWidth, 
             drawHeight
         );
