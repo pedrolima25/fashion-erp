@@ -82,8 +82,13 @@ const productImg = new Image();
 productImg.src = "/static/placeholder_shirt.png"; // Placeholder
 
 function onResults(results) {
-    loadingOverlay.style.display = 'none';
+    if (loadingOverlay.style.display !== 'none') {
+        console.log("MediaPipe pronto! Recebendo frames...");
+        loadingOverlay.style.display = 'none';
+    }
     
+    if (!results.image) return;
+
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -141,7 +146,12 @@ const camera = new Camera(videoElement, {
     width: 640,
     height: 480
 });
-camera.start();
+camera.start().catch(err => {
+    console.error("Erro ao iniciar câmera:", err);
+    loadingOverlay.innerHTML = `<div class="ph ph-warning" style="font-size:3rem; color:#ef4444; margin-bottom:1rem;"></div>
+                               <p style="color:white; font-weight:600;">Erro na Câmera</p>
+                               <p style="color:rgba(255,255,255,0.6); font-size:0.8rem; padding:0 2rem; text-align:center;">Verifique as permissões de vídeo do seu navegador.</p>`;
+});
 
 </script>
 {% endblock %}
