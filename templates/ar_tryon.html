@@ -124,9 +124,14 @@ function onResults(results) {
         const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
         const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
         
-        // Dimensões baseadas na largura dos ombros
+        // Dimensões inteligentes (Melhorado para quem está sentado)
         const shoulderWidth = Math.sqrt(dx*dx + dy*dy) * canvasElement.width;
-        const torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height || (shoulderWidth * 1.5);
+        let torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
+        
+        // Se a detecção do quadril estiver muito próxima do ombro (sentado), usamos proporção fixa
+        if (!torsoHeight || torsoHeight < shoulderWidth * 0.8) {
+            torsoHeight = shoulderWidth * 1.5;
+        }
 
         // Ângulo estável
         const angle = Math.atan2(dy, dx);
@@ -135,18 +140,17 @@ function onResults(results) {
         canvasCtx.translate(midPointX, midPointY);
         canvasCtx.rotate(angle + Math.PI);
 
-        // Escalas proporcionais clássicas
+        // Escalas proporcionais
         const drawWidth = shoulderWidth * 2.2; 
-        const drawHeight = torsoHeight * 1.5;
+        const drawHeight = torsoHeight * 1.4;
 
         canvasCtx.drawImage(
             productImg, 
             -drawWidth / 2, 
-            -drawHeight * 0.15, // Volta para o ajuste de pescoço
+            -drawHeight * 0.08, // BAIXADO para não cobrir o rosto
             drawWidth, 
             drawHeight
         );
-        canvasCtx.restore();
         canvasCtx.restore();
     } else {
         statusBadge.innerText = "Corpo não detectado";
