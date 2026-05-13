@@ -119,18 +119,15 @@ function onResults(results) {
         const dx = rightShoulder.x - leftShoulder.x;
         const dy = rightShoulder.y - leftShoulder.y;
 
-        // Centro do Torso (Média entre ombros e quadris para estabilidade total)
-        const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
-        const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-        const midHipX = (leftHip.x + rightHip.x) / 2;
-        const midHipY = (leftHip.y + rightHip.y) / 2;
-
-        const midPointX = ((midShoulderX + midHipX) / 2) * canvasElement.width;
-        const midPointY = ((midShoulderY + midHipY) / 2) * canvasElement.height;
+        // Centro do Torso (Apenas Ombros para máxima compatibilidade)
+        const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
+        const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
         
-        // Dimensões baseadas na escala corporal real
+        // Dimensões baseadas na largura dos ombros
+        const dx = rightShoulder.x - leftShoulder.x;
+        const dy = rightShoulder.y - leftShoulder.y;
         const shoulderWidth = Math.sqrt(dx*dx + dy*dy) * canvasElement.width;
-        const torsoHeight = Math.abs(midShoulderY - midHipY) * canvasElement.height;
+        const torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height || (shoulderWidth * 1.5);
 
         // Ângulo estável
         const angle = Math.atan2(dy, dx);
@@ -139,17 +136,18 @@ function onResults(results) {
         canvasCtx.translate(midPointX, midPointY);
         canvasCtx.rotate(angle + Math.PI);
 
-        // Escalas proporcionais (Ajustado para "grudar")
-        const drawWidth = shoulderWidth * 2.1; 
-        const drawHeight = torsoHeight * 1.8;
+        // Escalas proporcionais clássicas
+        const drawWidth = shoulderWidth * 2.2; 
+        const drawHeight = torsoHeight * 1.5;
 
         canvasCtx.drawImage(
             productImg, 
             -drawWidth / 2, 
-            -drawHeight * 0.55, // Centraliza no torso
+            -drawHeight * 0.15, // Volta para o ajuste de pescoço
             drawWidth, 
             drawHeight
         );
+        canvasCtx.restore();
         canvasCtx.restore();
     } else {
         statusBadge.innerText = "Corpo não detectado";
@@ -168,7 +166,7 @@ const pose = new Pose({
 pose.setOptions({
     modelComplexity: 0, 
     smoothLandmarks: true,
-    enableSegmentation: true, // Ativado para "grudar" melhor
+    enableSegmentation: false,
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
