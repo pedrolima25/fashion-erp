@@ -171,6 +171,21 @@ pose.setOptions({
 
 pose.onResults(onResults);
 
+const btnSnap = document.getElementById('btn-snap');
+btnSnap.addEventListener('click', () => {
+    const dataUrl = canvasElement.toDataURL("image/png");
+    const link = document.createElement('a');
+    link.download = `meu-look-fashion-${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+    
+    // Feedback visual
+    btnSnap.innerHTML = '<i class="ph ph-check"></i> Foto Salva!';
+    setTimeout(() => {
+        btnSnap.innerHTML = '<i class="ph ph-camera"></i> Tirar Foto do Look';
+    }, 2000);
+});
+
 const camera = new Camera(videoElement, {
     onFrame: async () => {
         await pose.send({image: videoElement});
