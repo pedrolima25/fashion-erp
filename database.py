@@ -2,7 +2,7 @@ import os
 import pytz
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Boolean, UniqueConstraint, text, inspect, Text
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Boolean, UniqueConstraint, text, inspect, Text, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from passlib.context import CryptContext
 import logging
@@ -122,6 +122,7 @@ class Product(Base):
     base_price = Column(Float, default=0.0)
     cost_price = Column(Float, default=0.0)
     image_base64 = Column(Text, nullable=True)
+    size_chart = Column(JSON, nullable=True) # Ex: {"M": {"busto": 90, "cintura": 70}, "G": {...}}
     active = Column(Boolean, default=True)
     show_on_whatsapp = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
@@ -437,6 +438,8 @@ def run_migrations():
             conn.execute(text("ALTER TABLE products ADD COLUMN cost_price FLOAT DEFAULT 0.0"))
         if 'show_on_whatsapp' not in cols_prod:
             conn.execute(text("ALTER TABLE products ADD COLUMN show_on_whatsapp BOOLEAN DEFAULT TRUE"))
+        if 'size_chart' not in cols_prod:
+            conn.execute(text("ALTER TABLE products ADD COLUMN size_chart JSON"))
 
         cols_vars = [c['name'] for c in inspector.get_columns('product_variations')]
         if 'cost_price_override' not in cols_vars:

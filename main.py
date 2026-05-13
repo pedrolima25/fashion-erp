@@ -352,6 +352,10 @@ def marketing_page(request: Request, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == cid).first()
     return templates.TemplateResponse(request, "marketing.html", {"request": request, "active_page": "marketing", "company": company, "role": request.session.get("role")})
 
+@app.get("/provador", response_class=HTMLResponse)
+def view_provador(request: Request):
+    return templates.TemplateResponse(request, "ar_tryon.html", {"request": request})
+
 @app.get("/configuracoes", response_class=HTMLResponse)
 def settings_page(request: Request):
     if "user" not in request.session:

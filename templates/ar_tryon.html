@@ -1,0 +1,121 @@
+{% extends "master.html" %}
+
+{% block content %}
+<div class="glass" style="max-width: 900px; margin: 0 auto; padding: 1.5rem; border-radius: 24px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+        <div>
+            <h1 style="margin:0; font-size:1.8rem; background:linear-gradient(90deg, #6366f1, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Provador AR Real-Time</h1>
+            <p style="color:var(--text-muted); margin:0;">Ajuste a peça no seu corpo usando a câmera</p>
+        </div>
+        <a href="/vendas" class="btn btn-secondary"><i class="ph ph-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div style="position:relative; width:100%; max-width:640px; margin:0 auto; aspect-ratio:4/3; background:#000; border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.5); border:2px solid var(--glass-border);">
+        <video id="input_video" style="display:none;"></video>
+        <canvas id="output_canvas" style="width:100%; height:100%; transform: scaleX(-1);"></canvas>
+        
+        <div id="loading-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10;">
+            <div class="ph ph-spinner ph-spin" style="font-size:3rem; color:var(--primary); margin-bottom:1rem;"></div>
+            <p style="color:white; font-weight:600;">Iniciando Visão Computacional...</p>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-top:2rem;">
+        <div class="glass" style="padding:1.5rem; border-radius:16px;">
+            <h3 style="margin-top:0;"><i class="ph ph-info" style="color:var(--primary);"></i> Como usar</h3>
+            <ul style="color:var(--text-muted); font-size:0.9rem; padding-left:1.2rem;">
+                <li style="margin-bottom:0.5rem;">Fique a cerca de 2 metros da câmera.</li>
+                <li style="margin-bottom:0.5rem;">Certifique-se de que seu corpo inteiro está visível.</li>
+                <li style="margin-bottom:0.5rem;">O sistema irá sobrepor a peça automaticamente.</li>
+            </ul>
+        </div>
+        
+        <div class="glass" style="padding:1.5rem; border-radius:16px; display:flex; flex-direction:column; justify-content:center;">
+            <div style="text-align:center; margin-bottom:1rem;">
+                <span id="detection-status" class="badge" style="background:rgba(239,68,68,0.2); color:#ef4444;">Corpo não detectado</span>
+            </div>
+            <button id="btn-snap" class="btn btn-primary" style="width:100%;"><i class="ph ph-camera"></i> Tirar Foto do Look</button>
+        </div>
+    </div>
+</div>
+
+<!-- MediaPipe SDKs -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+const videoElement = document.getElementById('input_video');
+const canvasElement = document.getElementById('output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
+const loadingOverlay = document.getElementById('loading-overlay');
+const statusBadge = document.getElementById('detection-status');
+
+// Imagem do Produto (Será dinâmico)
+const productImg = new Image();
+productImg.src = "/static/placeholder_shirt.png"; // Placeholder
+
+function onResults(results) {
+    loadingOverlay.style.display = 'none';
+    
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.poseLandmarks) {
+        statusBadge.innerText = "Corpo Detectado";
+        statusBadge.style.background = "rgba(16,185,129,0.2)";
+        statusBadge.style.color = "#10b981";
+
+        // Lógica de Sobreposição (Simplified for demo)
+        const leftShoulder = results.poseLandmarks[11];
+        const rightShoulder = results.poseLandmarks[12];
+        const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
+        const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
+        
+        const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x) * canvasElement.width;
+        const drawWidth = shoulderWidth * 2.5; // Escala da roupa
+        const drawHeight = drawWidth * 1.2;
+
+        canvasCtx.drawImage(
+            productImg, 
+            midPointX - drawWidth / 2, 
+            midPointY - drawHeight * 0.2, 
+            drawWidth, 
+            drawHeight
+        );
+    } else {
+        statusBadge.innerText = "Corpo não detectado";
+        statusBadge.style.background = "rgba(239,68,68,0.2)";
+        statusBadge.style.color = "#ef4444";
+    }
+    canvasCtx.restore();
+}
+
+const pose = new Pose({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    }
+});
+
+pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+pose.onResults(onResults);
+
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
+        await pose.send({image: videoElement});
+    },
+    width: 640,
+    height: 480
+});
+camera.start();
+
+</script>
+{% endblock %}
