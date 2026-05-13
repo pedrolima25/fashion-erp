@@ -1,0 +1,121 @@
+{% extends "master.html" %}
+
+{% block content %}
+<div class="glass" style="max-width: 600px; margin: 2rem auto; padding: 2.5rem; border-radius: 30px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+    <div style="text-align:center; margin-bottom:2rem;">
+        <div style="width:70px; height:70px; background:rgba(99,102,241,0.15); border-radius:22px; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+            <i class="ph ph-ruler" style="color:var(--primary); font-size:2.2rem;"></i>
+        </div>
+        <h1 style="margin:0; font-size:2rem; background:linear-gradient(90deg, #6366f1, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:800;">Provador Inteligente</h1>
+        <p style="color:var(--text-muted); margin-top:0.5rem; font-size:0.95rem;">Descubra o tamanho ideal para você em segundos.</p>
+    </div>
+
+    <div id="step-1" class="fade-in">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
+            <div>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Peso (kg)</label>
+                <input type="number" id="user-weight" placeholder="Ex: 70" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:white; font-size:1.1rem; font-weight:600;">
+            </div>
+            <div>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Altura (cm)</label>
+                <input type="number" id="user-height" placeholder="Ex: 170" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:white; font-size:1.1rem; font-weight:600;">
+            </div>
+        </div>
+
+        <div style="margin-bottom:2rem;">
+            <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Qual tamanho você costuma usar?</label>
+            <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:0.5rem;">
+                <button onclick="selectPref('PP')" class="size-btn">PP</button>
+                <button onclick="selectPref('P')" class="size-btn">P</button>
+                <button onclick="selectPref('M')" class="size-btn active">M</button>
+                <button onclick="selectPref('G')" class="size-btn">G</button>
+                <button onclick="selectPref('GG')" class="size-btn">GG</button>
+            </div>
+        </div>
+
+        <button onclick="calculateSize()" class="btn btn-primary" style="width:100%; height:60px; font-size:1.2rem; font-weight:800; border-radius:16px; box-shadow: 0 10px 25px -5px rgba(99,102,241,0.4);">
+            CALCULAR MEU TAMANHO <i class="ph ph-magic-wand" style="margin-left:8px;"></i>
+        </button>
+    </div>
+
+    <div id="result-area" style="display:none; text-align:center;" class="fade-in">
+        <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:2rem; border-radius:24px; margin-bottom:2rem;">
+            <p style="color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">O tamanho recomendado é:</p>
+            <h2 id="recommended-size" style="font-size:4rem; color:var(--accent); margin:0; font-weight:900; line-height:1;">G</h2>
+            <p id="fit-msg" style="margin-top:1rem; font-size:0.9rem; color:#10b981; font-weight:700;">Ficará perfeito no seu corpo! ✨</p>
+        </div>
+
+        <div style="display:flex; gap:1rem;">
+            <button onclick="resetProvador()" class="btn btn-secondary" style="flex:1;">Tentar de novo</button>
+            <button class="btn btn-primary" style="flex:1; background:var(--accent);">Adicionar ao Carrinho</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .size-btn {
+        padding: 0.75rem;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .size-btn.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        box-shadow: 0 5px 15px rgba(99,102,241,0.3);
+    }
+    .size-btn:hover:not(.active) {
+        background: rgba(255,255,255,0.08);
+    }
+    .fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+    let selectedPref = 'M';
+
+    function selectPref(size) {
+        selectedPref = size;
+        document.querySelectorAll('.size-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.innerText === size);
+        });
+    }
+
+    function calculateSize() {
+        const weight = parseFloat(document.getElementById('user-weight').value);
+        const height = parseFloat(document.getElementById('user-height').value);
+
+        if (!weight || !height) {
+            alert("Por favor, preencha peso e altura.");
+            return;
+        }
+
+        // Simulação de Algoritmo Inteligente
+        // Num sistema real, compararíamos com o JSON de size_chart do produto
+        let recommended = 'M';
+        
+        if (weight < 55) recommended = 'P';
+        else if (weight > 85) recommended = 'GG';
+        else if (weight > 75) recommended = 'G';
+        else recommended = 'M';
+
+        document.getElementById('recommended-size').innerText = recommended;
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('result-area').style.display = 'block';
+    }
+
+    function resetProvador() {
+        document.getElementById('step-1').style.display = 'block';
+        document.getElementById('result-area').style.display = 'none';
+    }
+</script>
+{% endblock %}

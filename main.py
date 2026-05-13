@@ -354,6 +354,10 @@ def marketing_page(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/provador", response_class=HTMLResponse)
 def view_provador(request: Request):
+    return templates.TemplateResponse(request, "provador_medidas.html", {"request": request, "active_page": "provador"})
+
+@app.get("/provador-ar", response_class=HTMLResponse)
+def view_provador_ar(request: Request):
     return templates.TemplateResponse(request, "ar_tryon.html", {"request": request, "active_page": "provador"})
 
 @app.get("/configuracoes", response_class=HTMLResponse)

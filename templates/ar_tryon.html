@@ -99,7 +99,7 @@ const pose = new Pose({
 });
 
 pose.setOptions({
-    modelComplexity: 1,
+    modelComplexity: 0, // 0 = Lite (Rápido), 1 = Full, 2 = Heavy
     smoothLandmarks: true,
     enableSegmentation: false,
     minDetectionConfidence: 0.5,
