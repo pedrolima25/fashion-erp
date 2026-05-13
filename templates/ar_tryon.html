@@ -110,27 +110,40 @@ function onResults(results) {
         statusBadge.style.background = "rgba(16,185,129,0.2)";
         statusBadge.style.color = "#10b981";
 
-        // Lógica de Sobreposição Aprimorada
+        // Lógica de Sobreposição Ultra-Realista
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
+        const leftElbow = results.poseLandmarks[13];
+        const rightElbow = results.poseLandmarks[14];
         const leftHip = results.poseLandmarks[23];
         const rightHip = results.poseLandmarks[24];
 
+        // Centro do Torso
         const midPointX = (leftShoulder.x + rightShoulder.x) / 2 * canvasElement.width;
         const midPointY = (leftShoulder.y + rightShoulder.y) / 2 * canvasElement.height;
         
+        // Dimensões baseadas na distância real (Z) e largura de ombros
         const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x) * canvasElement.width;
-        const bodyHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
+        const torsoHeight = Math.abs(leftShoulder.y - leftHip.y) * canvasElement.height;
 
-        const drawWidth = shoulderWidth * 2.2; 
-        const drawHeight = bodyHeight * 1.5;
+        // Ângulo de inclinação do corpo (para rotacionar a roupa)
+        const angle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
 
-        // Desenhar a roupa um pouco mais abaixo (offset do pescoço)
+        canvasCtx.translate(midPointX, midPointY);
+        canvasCtx.rotate(angle);
+
+        const drawWidth = shoulderWidth * 2.3; 
+        const drawHeight = torsoHeight * 1.6;
+
+        // Ajuste dinâmico das "mangas" (baseado na abertura dos braços)
+        const armSpread = Math.abs(leftElbow.x - rightElbow.x) * canvasElement.width;
+        const widthMultiplier = Math.max(1, armSpread / (shoulderWidth * 1.5));
+
         canvasCtx.drawImage(
             productImg, 
-            midPointX - drawWidth / 2, 
-            midPointY - (drawHeight * 0.1), // Ajustado para não cobrir o rosto
-            drawWidth, 
+            -(drawWidth * widthMultiplier) / 2, 
+            -(drawHeight * 0.15), 
+            drawWidth * widthMultiplier, 
             drawHeight
         );
     } else {
