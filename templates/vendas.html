@@ -121,7 +121,10 @@
         <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">CLIENTE (opcional)</label>
             <input id="customer-name" type="text" placeholder="Nome do cliente" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem; margin-bottom:0.4rem;">
-            <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;">
+            <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;" oninput="onPhoneInput(this.value)">
+            <div id="customer-loyalty-badge" style="display:none; margin-top:0.4rem; padding:0.35rem 0.6rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:6px; font-size:0.75rem; color:var(--primary-light);">
+                <i class="ph ph-star"></i> <span id="customer-loyalty-text"></span>
+            </div>
         </div>
 
         <!-- Logística -->
@@ -164,6 +167,22 @@
             </select>
         </div>
 
+        <!-- Cupom -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">CUPOM</label>
+            <div style="display:flex; gap:6px;">
+                <input id="coupon-input" type="text" placeholder="Código do cupom" style="flex:1; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <button onclick="applyCoupon()" class="btn-tiny" style="padding:0.5rem 0.75rem; white-space:nowrap;">Aplicar</button>
+            </div>
+            <div id="coupon-feedback" style="display:none; margin-top:0.35rem; font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px;"></div>
+        </div>
+
+        <!-- Observação -->
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">OBSERVAÇÃO</label>
+            <input id="sale-notes" type="text" placeholder="Ex: embrulho presente, ligar antes de entregar..." style="width:100%; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem;">
+        </div>
+
         <!-- Totais -->
         <div style="background:rgba(255,255,255,0.03); border-radius:10px; padding:0.75rem; margin-bottom:0.75rem;">
             <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.6rem;">
@@ -191,6 +210,10 @@
             <div style="display:flex; justify-content:space-between; font-size:1.3rem; font-weight:900; padding-top:0.75rem; border-top:1px solid var(--glass-border); margin-top:0.25rem;">
                 <span style="letter-spacing:-0.5px;">TOTAL</span>
                 <span id="cart-total" style="color:var(--accent); text-shadow:0 0 15px rgba(16,185,129,0.3);">R$ 0,00</span>
+            </div>
+            <div id="troco-row" style="display:none; margin-top:0.5rem; padding:0.4rem 0.6rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:6px; display:flex; justify-content:space-between; font-size:0.85rem;">
+                <span style="color:#10b981; font-weight:700;">TROCO</span>
+                <span id="troco-value" style="color:#10b981; font-weight:800;">R$ 0,00</span>
             </div>
         </div>
 
@@ -302,6 +325,11 @@
     let cart = JSON.parse(localStorage.getItem('pdv_cart') || '[]');
     let activeProduct = null;
     let currentReceiptSaleId = null;
+    let companyName = 'FASHION ERP';
+    let appliedCoupon = null;
+    let lookupDebounce = null;
+
+    fetch('/api/config').then(r => r.json()).then(d => { if (d.name) companyName = d.name.toUpperCase(); });
 
     // Atalhos de Teclado
     document.addEventListener('keydown', (e) => {
@@ -330,7 +358,7 @@
 
     async function loadProducts() {
         try {
-            const res = await fetch('/api/products');
+            const res = await fetch('/api/products?include_images=false');
             products = await res.json();
             renderProducts(products);
         } catch(e) { console.error('Erro ao carregar produtos', e); }
@@ -510,11 +538,11 @@
             feeRow.style.display = 'none';
         }
 
-        // Automatização: se houver apenas um pagamento, atualiza o valor dele
         if (payments.length === 1) {
             payments[0].amount = total;
             renderPayments();
         }
+        updateTroco();
     }
 
     let payments = [{ method: 'Dinheiro', amount: 0 }];
@@ -561,8 +589,74 @@
         }
     }
 
-    function updatePaymentMethod(index, val) { payments[index].method = val; }
-    function updatePaymentAmount(index, val) { payments[index].amount = parseFloat(val) || 0; }
+    function updatePaymentMethod(index, val) { payments[index].method = val; updateTroco(); }
+    function updatePaymentAmount(index, val) { payments[index].amount = parseFloat(val) || 0; updateTroco(); }
+
+    function updateTroco() {
+        const total = calculateCurrentTotal();
+        const cashPaid = payments.filter(p => p.method === 'Dinheiro').reduce((s, p) => s + p.amount, 0);
+        const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+        const trocoRow = document.getElementById('troco-row');
+        if (cashPaid > 0 && totalPaid >= total && cashPaid > (total - payments.filter(p => p.method !== 'Dinheiro').reduce((s,p)=>s+p.amount,0))) {
+            const troco = totalPaid - total;
+            if (troco > 0.001) {
+                document.getElementById('troco-value').textContent = `R$ ${troco.toFixed(2)}`;
+                trocoRow.style.display = 'flex';
+                return;
+            }
+        }
+        trocoRow.style.display = 'none';
+    }
+
+    function onPhoneInput(phone) {
+        const badge = document.getElementById('customer-loyalty-badge');
+        badge.style.display = 'none';
+        clearTimeout(lookupDebounce);
+        if (phone.length < 8) return;
+        lookupDebounce = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/sales/customer-lookup?phone=${encodeURIComponent(phone)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const nameEl = document.getElementById('customer-name');
+                    if (!nameEl.value.trim()) nameEl.value = data.name;
+                    document.getElementById('customer-loyalty-text').textContent =
+                        `${data.name} · ${data.loyalty_points} ponto${data.loyalty_points !== 1 ? 's' : ''}`;
+                    badge.style.display = 'block';
+                }
+            } catch(e) {}
+        }, 600);
+    }
+
+    async function applyCoupon() {
+        const code = document.getElementById('coupon-input').value.trim().toUpperCase();
+        const fb = document.getElementById('coupon-feedback');
+        if (!code) return;
+        fb.style.display = 'none';
+        appliedCoupon = null;
+        try {
+            const res = await fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok && data.valid) {
+                appliedCoupon = data;
+                const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+                let disc = data.discount_type === 'percent'
+                    ? (subtotal * data.discount_value) / 100
+                    : data.discount_value;
+                disc = Math.min(disc, subtotal);
+                document.getElementById('cart-discount').value = disc.toFixed(2);
+                updateCartTotals();
+                fb.style.cssText = 'display:block; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:#10b981; margin-top:0.35rem; font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px;';
+                fb.textContent = `✓ Cupom "${data.code}" aplicado — ${data.discount_type === 'percent' ? data.discount_value + '%' : 'R$ ' + data.discount_value} de desconto`;
+            } else {
+                fb.style.cssText = 'display:block; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.2); color:var(--secondary); margin-top:0.35rem; font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px;';
+                fb.textContent = data.error || 'Cupom inválido.';
+            }
+        } catch(e) {
+            fb.style.cssText = 'display:block; color:var(--secondary); margin-top:0.35rem; font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px;';
+            fb.textContent = 'Erro ao validar cupom.';
+        }
+    }
 
     function calculateCurrentTotal() {
         const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -608,7 +702,9 @@
             delivery_reference: isDelivery ? document.getElementById('delivery-reference').value : '',
             delivery_location_link: isDelivery ? document.getElementById('delivery-location-link').value : '',
             customer_name: document.getElementById('customer-name').value.trim() || null,
-            customer_phone: document.getElementById('customer-phone').value.trim() || null
+            customer_phone: document.getElementById('customer-phone').value.trim() || null,
+            notes: document.getElementById('sale-notes').value.trim() || null,
+            coupon_code: appliedCoupon ? appliedCoupon.code : null,
         };
 
         try {
@@ -620,9 +716,10 @@
             const data = await res.json();
             if (data.success) {
                 currentReceiptSaleId = data.sale_id;
+                const loyaltyEarned = data.loyalty_earned || 0;
                 cart = [];
                 saveCart();
-                await showReceipt(data.sale_id);
+                await showReceipt(data.sale_id, loyaltyEarned);
             } else {
                 alert(data.error || 'Erro ao finalizar venda.');
                 btn.disabled = false;
@@ -635,7 +732,7 @@
         }
     }
 
-    async function showReceipt(saleId) {
+    async function showReceipt(saleId, loyaltyEarned = 0) {
         try {
             const res = await fetch(`/api/sales/${saleId}`);
             const sale = await res.json();
@@ -675,6 +772,21 @@
             document.getElementById('receipt-payment').textContent = sale.payment_method;
             document.getElementById('receipt-delivery-type').textContent = sale.delivery_type === 'delivery' ? '🛵 Entrega' : '🏪 Retirada';
 
+            let loyaltyEl = document.getElementById('receipt-loyalty');
+            if (!loyaltyEl) {
+                loyaltyEl = document.createElement('div');
+                loyaltyEl.id = 'receipt-loyalty';
+                loyaltyEl.style.cssText = 'display:none; margin-top:0.5rem; padding:0.35rem 0.6rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:6px; font-size:0.8rem; color:var(--primary-light); text-align:center;';
+                document.getElementById('receipt-payment').closest('.glass > div:last-of-type') ||
+                document.querySelector('#receipt-modal .glass').appendChild(loyaltyEl);
+            }
+            if (loyaltyEarned > 0) {
+                loyaltyEl.textContent = `⭐ +${loyaltyEarned} ponto${loyaltyEarned !== 1 ? 's' : ''} de fidelidade ganhos!`;
+                loyaltyEl.style.display = 'block';
+            } else {
+                loyaltyEl.style.display = 'none';
+            }
+
             // Gerar cupom para impressão
             generatePrintContent(sale);
             
@@ -702,7 +814,7 @@
 
         printDiv.innerHTML = `
             <div style="font-family:'Courier New', Courier, monospace; font-size:12px; width:80mm; padding:10px; background:white; color:black;">
-                <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">FASHION ERP</div>
+                <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">${companyName}</div>
                 <div style="text-align:center; margin-bottom:10px; border-bottom:1px dashed black; padding-bottom:10px;">COMPROVANTE DE VENDA</div>
                 
                 <div style="margin-bottom:10px;">
@@ -732,6 +844,7 @@
                 <div style="border-top:1px dashed black; padding-top:10px; text-align:center;">
                     <b>Pagamento:</b> ${sale.payment_method}<br>
                     <b>Entrega:</b> ${sale.delivery_type === 'delivery' ? 'Entrega' : 'Retirada'}<br>
+                    ${sale.notes ? `<br><b>Obs:</b> ${sale.notes}<br>` : ''}
                     <br>
                     Obrigado pela preferência!
                 </div>
@@ -757,12 +870,18 @@
             document.getElementById('delivery-location-link').value = '';
             document.getElementById('delivery-type').value = 'pickup';
             document.getElementById('sale-seller').value = '';
-            
+            document.getElementById('coupon-input').value = '';
+            document.getElementById('coupon-feedback').style.display = 'none';
+            document.getElementById('sale-notes').value = '';
+            document.getElementById('customer-loyalty-badge').style.display = 'none';
+            document.getElementById('troco-row').style.display = 'none';
+
             toggleAddressField('pickup');
 
             // 2. Limpar Variáveis de Estado
             cart = [];
             payments = [{ method: 'Dinheiro', amount: 0 }];
+            appliedCoupon = null;
             
             // 3. Salvar e Renderizar
             saveCart();

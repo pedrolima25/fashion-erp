@@ -7,23 +7,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def generate_pix_payment(amount: float, description: str, token: str = None, static_key: str = None, company_name: str = "Barbearia", merchant_city: str = "Manaus"):
+def generate_pix_payment(amount: float, description: str, token: str = None, static_key: str = None, company_name: str = "Barbearia", merchant_city: str = "Manaus", payer_email: str = None):
     """
-    Gera um pagamento PIX. 
+    Gera um pagamento PIX.
     1. Tenta usar Mercado Pago (Dinâmico) se o token for fornecido.
     2. Caso contrário, gera um PIX Estático se a chave for fornecida.
     """
-    
+
     # --- 1. MERCADO PAGO (DINÂMICO) ---
     if token and len(token) > 20:
         try:
             sdk = mercadopago.SDK(token)
+            email = payer_email or f"cliente@{company_name.lower().replace(' ', '')}.com.br"
             payment_data = {
                 "transaction_amount": float(amount),
                 "description": description,
                 "payment_method_id": "pix",
                 "payer": {
-                    "email": "cliente@barbearia.com",
+                    "email": email,
                 }
             }
             payment_response = sdk.payment().create(payment_data)

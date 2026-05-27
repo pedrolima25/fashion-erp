@@ -2,7 +2,7 @@ import os
 import pytz
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Boolean, UniqueConstraint, text, inspect, Text, JSON
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, DateTime, ForeignKey, Boolean, UniqueConstraint, text, inspect, Text, JSON, Index
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from passlib.context import CryptContext
 import logging
@@ -49,20 +49,20 @@ class Company(Base):
     category = Column(String, default="Loja de Roupas")
     active = Column(Boolean, default=True)
     is_archived = Column(Boolean, default=False)
-    
+
     whatsapp_number = Column(String, nullable=True)
     pix_key = Column(String, nullable=True)
     mercado_pago_token = Column(String, nullable=True)
-    
+
     logo_base64 = Column(Text, nullable=True)
     address = Column(Text, nullable=True)
     location_link = Column(Text, nullable=True)
-    delivery_fee = Column(Float, default=0.0)
+    delivery_fee = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     delivery_mode = Column(String, default="fixed")
     slug = Column(String, nullable=True, unique=True, index=True)
-    monthly_price = Column(Float, default=80.0)
+    monthly_price = Column(Numeric(10, 2, asdecimal=False), default=80.0)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
-    
+
     products = relationship("Product", back_populates="company")
     users = relationship("User", back_populates="company")
     subscriptions = relationship("Subscription", back_populates="company")
@@ -77,7 +77,7 @@ class Subscription(Base):
     end_date = Column(DateTime(timezone=True))
     status = Column(String, default="active")
     saas_reminder_sent_at = Column(DateTime(timezone=True), nullable=True)
-    
+
     company = relationship("Company", back_populates="subscriptions")
 
 class User(Base):
@@ -88,7 +88,7 @@ class User(Base):
     hashed_password = Column(String)
     is_master = Column(Boolean, default=False)
     role = Column(String, default="admin") # admin, seller
-    
+
     company = relationship("Company", back_populates="users")
 
 # --- MODELS FASHION ERP ---
@@ -96,11 +96,12 @@ class User(Base):
 class Expense(Base):
     """Despesas Fixas e Variáveis"""
     __tablename__ = "expenses"
+    __table_args__ = (Index("ix_expenses_company_date", "company_id", "date"),)
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     category = Column(String) # Aluguel, Luz, Marketing, etc.
     description = Column(String)
-    amount = Column(Float)
+    amount = Column(Numeric(10, 2, asdecimal=False))
     date = Column(DateTime(timezone=True), default=get_manaus_time)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
@@ -109,7 +110,7 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     name = Column(String, index=True)
-    
+
     products = relationship("Product", back_populates="category")
 
 class Product(Base):
@@ -119,14 +120,14 @@ class Product(Base):
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     name = Column(String, index=True)
     description = Column(Text, nullable=True)
-    base_price = Column(Float, default=0.0)
-    cost_price = Column(Float, default=0.0)
+    base_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+    cost_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     image_base64 = Column(Text, nullable=True)
     size_chart = Column(JSON, nullable=True) # Ex: {"M": {"busto": 90, "cintura": 70}, "G": {...}}
     active = Column(Boolean, default=True)
     show_on_whatsapp = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
-    
+
     company = relationship("Company", back_populates="products")
     category = relationship("Category", back_populates="products")
     variations = relationship("ProductVariation", back_populates="product", cascade="all, delete-orphan")
@@ -139,9 +140,9 @@ class ProductVariation(Base):
     color = Column(String, nullable=True)
     sku = Column(String, nullable=True, index=True)
     stock_quantity = Column(Integer, default=0)
-    price_override = Column(Float, nullable=True)
-    cost_price_override = Column(Float, nullable=True)
-    
+    price_override = Column(Numeric(10, 2, asdecimal=False), nullable=True)
+    cost_price_override = Column(Numeric(10, 2, asdecimal=False), nullable=True)
+
     product = relationship("Product", back_populates="variations")
 
 class Neighborhood(Base):
@@ -149,8 +150,8 @@ class Neighborhood(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     name = Column(String, index=True)
-    fee = Column(Float, default=0.0)
-    
+    fee = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+
     company = relationship("Company")
 
 class DeliveryDriver(Base):
@@ -162,7 +163,7 @@ class DeliveryDriver(Base):
     vehicle = Column(String, nullable=True)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
-    
+
     company = relationship("Company")
 
 class Customer(Base):
@@ -180,13 +181,17 @@ class Customer(Base):
 
 class Sale(Base):
     __tablename__ = "sales"
+    __table_args__ = (
+        Index("ix_sales_company_date", "company_id", "date"),
+        Index("ix_sales_company_status", "company_id", "status"),
+    )
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
-    total_amount = Column(Float, default=0.0)
-    discount = Column(Float, default=0.0)
+    total_amount = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+    discount = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     delivery_type = Column(String, nullable=True)
-    delivery_fee = Column(Float, default=0.0)
+    delivery_fee = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     delivery_address = Column(Text, nullable=True)
     delivery_reference = Column(Text, nullable=True)
     delivery_location_link = Column(Text, nullable=True)
@@ -199,7 +204,9 @@ class Sale(Base):
     status = Column(String, default="pending") # pending, paid, completed, cancelled
     date = Column(DateTime(timezone=True), default=get_manaus_time)
     seller_id = Column(Integer, ForeignKey("sellers.id"), nullable=True)
-    
+    notes = Column(Text, nullable=True)
+    coupon_code = Column(String, nullable=True)
+
     company = relationship("Company", back_populates="sales")
     customer = relationship("Customer")
     items = relationship("SaleItem", back_populates="sale")
@@ -213,21 +220,22 @@ class SaleItem(Base):
     product_id = Column(Integer, ForeignKey("products.id"))
     variation_id = Column(Integer, ForeignKey("product_variations.id"), nullable=True)
     quantity = Column(Integer, default=1)
-    unit_price = Column(Float)
-    cost_price = Column(Float, default=0.0)
-    
+    unit_price = Column(Numeric(10, 2, asdecimal=False))
+    cost_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+
     sale = relationship("Sale", back_populates="items")
     product = relationship("Product")
     variation = relationship("ProductVariation")
 
 class Transaction(Base):
     __tablename__ = "transactions"
+    __table_args__ = (Index("ix_transactions_company_date", "company_id", "date"),)
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=True)
     type = Column(String) # 'receita' ou 'despesa'
     category = Column(String, nullable=True)
-    amount = Column(Float)
+    amount = Column(Numeric(10, 2, asdecimal=False))
     description = Column(String)
     payment_method = Column(String, default="PIX")
     date = Column(DateTime(timezone=True), default=get_manaus_time)
@@ -246,8 +254,8 @@ class DailyCash(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"))
     status = Column(String, default="open")
-    opening_balance = Column(Float, default=0.0)
-    closing_balance = Column(Float, nullable=True)
+    opening_balance = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+    closing_balance = Column(Numeric(10, 2, asdecimal=False), nullable=True)
     opened_at = Column(DateTime(timezone=True), default=get_manaus_time)
     closed_at = Column(DateTime(timezone=True), nullable=True)
     date = Column(DateTime(timezone=True), default=get_manaus_time)
@@ -271,7 +279,7 @@ class Coupon(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     code = Column(String, index=True)
     discount_type = Column(String, default="percent")
-    discount_value = Column(Float, default=0.0)
+    discount_value = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     max_uses = Column(Integer, default=0)
     current_uses = Column(Integer, default=0)
     valid_until = Column(DateTime(timezone=True), nullable=True)
@@ -283,9 +291,9 @@ class LoyaltyConfig(Base):
     __tablename__ = "loyalty_configs"
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), unique=True)
-    points_per_real = Column(Float, default=1.0)
+    points_per_real = Column(Numeric(10, 2, asdecimal=False), default=1.0)
     redemption_threshold = Column(Integer, default=100)
-    redemption_value = Column(Float, default=10.0)
+    redemption_value = Column(Numeric(10, 2, asdecimal=False), default=10.0)
     active = Column(Boolean, default=True)
 
 class Seller(Base):
@@ -295,7 +303,7 @@ class Seller(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     name = Column(String, index=True)
     phone = Column(String, nullable=True)
-    commission_rate = Column(Float, default=0.0)
+    commission_rate = Column(Numeric(5, 2, asdecimal=False), default=0.0)
     active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
@@ -318,7 +326,7 @@ class PurchaseOrder(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     supplier_id = Column(Integer, ForeignKey("suppliers.id"))
     items_json = Column(Text)
-    total_cost = Column(Float, default=0.0)
+    total_cost = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     status = Column(String, default="pending") # pending, received, cancelled
     received_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
@@ -333,7 +341,7 @@ class Exchange(Base):
     items_json = Column(Text)
     type = Column(String, default="exchange") # exchange, refund
     reason = Column(Text, nullable=True)
-    refund_amount = Column(Float, default=0.0)
+    refund_amount = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     date = Column(DateTime(timezone=True), default=get_manaus_time)
     sale = relationship("Sale")
 
@@ -344,35 +352,68 @@ class SalesGoal(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     month = Column(Integer) # 1-12
     year = Column(Integer)
-    target_value = Column(Float, default=0.0)
+    target_value = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
+
+class LoginAttempt(Base):
+    """Rastreia tentativas de login por IP para rate limiting (funciona com múltiplos workers)."""
+    __tablename__ = "login_attempts"
+    id = Column(Integer, primary_key=True, index=True)
+    ip = Column(String(45), index=True)
+    attempted_at = Column(DateTime(timezone=True), default=get_manaus_time, index=True)
+    success = Column(Boolean, default=False)
+
+class ChatSession(Base):
+    """Estado persistente das conversas do bot WhatsApp por empresa/telefone."""
+    __tablename__ = "chat_sessions"
+    __table_args__ = (UniqueConstraint('company_id', 'phone', name='ux_chat_company_phone'),)
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), index=True)
+    phone = Column(String, index=True)
+    state_json = Column(Text, default="{}")
+    updated_at = Column(DateTime(timezone=True), default=get_manaus_time)
+
+
+class AuditLog(Base):
+    """Rastreia ações críticas por usuário (delete produto, cancelar venda, etc.)."""
+    __tablename__ = "audit_logs"
+    __table_args__ = (Index("ix_audit_company_created", "company_id", "created_at"),)
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), index=True)
+    username = Column(String)
+    action = Column(String)       # ex: "delete_product", "cancel_sale", "change_price"
+    entity = Column(String)       # ex: "product", "sale"
+    entity_id = Column(Integer, nullable=True)
+    detail = Column(Text, nullable=True)  # JSON com dados relevantes
+    ip = Column(String(45), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_manaus_time, index=True)
 
 # --- UTILS & INITIAL DATA ---
 
 def populate_initial_data(db):
     if db.query(User).filter(User.username == "alessandro").count() == 0:
         master_user = User(
-            username="alessandro", 
+            username="alessandro",
             hashed_password=pwd_context.hash("master123"),
             is_master=True
         )
         db.add(master_user)
         db.commit()
-    
+
     if db.query(Company).count() == 0:
         demo_co = Company(name="Fashion Store Premium", category="Loja de Roupas")
         db.add(demo_co)
         db.commit()
         db.refresh(demo_co)
-        
+
         admin_user = User(
-            username="admin", 
+            username="admin",
             hashed_password=pwd_context.hash("123456"),
             company_id=demo_co.id
         )
         db.add(admin_user)
         db.commit()
-        
+
         new_sub = Subscription(
             company_id=demo_co.id,
             plan_type="mensal",
@@ -382,7 +423,7 @@ def populate_initial_data(db):
         )
         db.add(new_sub)
         db.commit()
-        
+
         cat1 = Category(company_id=demo_co.id, name="Masculino")
         cat2 = Category(company_id=demo_co.id, name="Feminino")
         db.add(cat1)
@@ -393,7 +434,7 @@ def run_migrations():
     """Garante que todas as tabelas e colunas existam."""
     Base.metadata.create_all(bind=engine)
     inspector = inspect(engine)
-    
+
     with engine.connect() as conn:
         cols_co = [c['name'] for c in inspector.get_columns('companies')]
         if 'active' not in cols_co:
@@ -404,7 +445,7 @@ def run_migrations():
             conn.execute(text("ALTER TABLE companies ADD COLUMN delivery_mode VARCHAR DEFAULT 'fixed'"))
         if 'slug' not in cols_co:
             conn.execute(text("ALTER TABLE companies ADD COLUMN slug VARCHAR"))
-        
+
         cols_sales = [c['name'] for c in inspector.get_columns('sales')]
         if 'delivery_type' not in cols_sales:
             conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_type VARCHAR"))
@@ -428,11 +469,15 @@ def run_migrations():
             conn.execute(text("ALTER TABLE sales ADD COLUMN delivery_completed_at TIMESTAMP"))
         if 'seller_id' not in cols_sales:
             conn.execute(text("ALTER TABLE sales ADD COLUMN seller_id INTEGER"))
+        if 'notes' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN notes TEXT"))
+        if 'coupon_code' not in cols_sales:
+            conn.execute(text("ALTER TABLE sales ADD COLUMN coupon_code VARCHAR"))
 
         cols_sub = [c['name'] for c in inspector.get_columns('subscriptions')]
         if 'saas_reminder_sent_at' not in cols_sub:
             conn.execute(text("ALTER TABLE subscriptions ADD COLUMN saas_reminder_sent_at TIMESTAMP"))
-        
+
         cols_prod = [c['name'] for c in inspector.get_columns('products')]
         if 'cost_price' not in cols_prod:
             conn.execute(text("ALTER TABLE products ADD COLUMN cost_price FLOAT DEFAULT 0.0"))
@@ -444,17 +489,17 @@ def run_migrations():
         cols_vars = [c['name'] for c in inspector.get_columns('product_variations')]
         if 'cost_price_override' not in cols_vars:
             conn.execute(text("ALTER TABLE product_variations ADD COLUMN cost_price_override FLOAT"))
-        
+
         cols_sched = [c['name'] for c in inspector.get_columns('scheduled_campaigns')]
         if 'frequency' not in cols_sched:
             conn.execute(text("ALTER TABLE scheduled_campaigns ADD COLUMN frequency VARCHAR DEFAULT 'once'"))
         if 'post_to_status' not in cols_sched:
             conn.execute(text("ALTER TABLE scheduled_campaigns ADD COLUMN post_to_status BOOLEAN DEFAULT FALSE"))
-        
+
         cols_sale_items = [c['name'] for c in inspector.get_columns('sale_items')]
         if 'cost_price' not in cols_sale_items:
             conn.execute(text("ALTER TABLE sale_items ADD COLUMN cost_price FLOAT DEFAULT 0.0"))
-        
+
         cols_cust = [c['name'] for c in inspector.get_columns('customers')]
         if 'birthday' not in cols_cust:
             conn.execute(text("ALTER TABLE customers ADD COLUMN birthday VARCHAR"))
@@ -473,5 +518,42 @@ def run_migrations():
         if 'category' not in cols_trans:
             conn.execute(text("ALTER TABLE transactions ADD COLUMN category VARCHAR"))
 
+        # Migrar colunas Float para Numeric(10,2) no PostgreSQL
+        if "postgresql" in DATABASE_URL.lower():
+            monetary_migrations = [
+                ("companies", ["delivery_fee", "monthly_price"]),
+                ("expenses", ["amount"]),
+                ("products", ["base_price", "cost_price"]),
+                ("product_variations", ["price_override", "cost_price_override"]),
+                ("neighborhoods", ["fee"]),
+                ("sales", ["total_amount", "discount", "delivery_fee"]),
+                ("sale_items", ["unit_price", "cost_price"]),
+                ("transactions", ["amount"]),
+                ("daily_cash", ["opening_balance", "closing_balance"]),
+                ("coupons", ["discount_value"]),
+                ("loyalty_configs", ["points_per_real", "redemption_value"]),
+                ("sellers", ["commission_rate"]),
+                ("purchase_orders", ["total_cost"]),
+                ("exchanges", ["refund_amount"]),
+                ("sales_goals", ["target_value"]),
+            ]
+            for table, cols in monetary_migrations:
+                for col in cols:
+                    try:
+                        conn.execute(text(
+                            f"ALTER TABLE {table} ALTER COLUMN {col} "
+                            f"TYPE NUMERIC(10,2) USING {col}::NUMERIC(10,2)"
+                        ))
+                    except Exception as e:
+                        logger.debug(f"Migração de tipo ignorada: {table}.{col}: {e}")
+
         conn.commit()
     logger.info("✨ Banco de dados sincronizado.")
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

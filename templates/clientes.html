@@ -5,125 +5,364 @@
 {% block header_title %}Gestão de Clientes{% endblock %}
 
 {% block content %}
-<div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h3 style="font-size: 1.25rem; margin-bottom: 0.25rem;">Base de Clientes</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Gerencie informações e histórico de compras.</p>
+
+<!-- Modal Criar / Editar Cliente -->
+<div id="customer-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:480px; width:100%; padding:2rem; border-radius:16px; position:relative;">
+        <button onclick="closeCustomerModal()" style="position:absolute; right:1.25rem; top:1.25rem; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.25rem;"><i class="ph ph-x"></i></button>
+        <h3 id="customer-modal-title" style="margin-bottom:1.5rem;">Novo Cliente</h3>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; display:block; margin-bottom:0.35rem;">NOME *</label>
+                <input id="c-name" type="text" placeholder="Nome completo" style="width:100%; padding:0.7rem 0.9rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; display:block; margin-bottom:0.35rem;">CELULAR / WHATSAPP</label>
+                <input id="c-phone" type="tel" placeholder="92999999999" style="width:100%; padding:0.7rem 0.9rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; display:block; margin-bottom:0.35rem;">E-MAIL</label>
+                <input id="c-email" type="email" placeholder="email@exemplo.com" style="width:100%; padding:0.7rem 0.9rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; display:block; margin-bottom:0.35rem;">ANIVERSÁRIO</label>
+                <input id="c-birthday" type="date" style="width:100%; padding:0.7rem 0.9rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.9rem; color-scheme:dark;">
+            </div>
         </div>
-        <div style="display: flex; gap: 1rem; flex: 1; max-width: 500px;">
-            <input type="text" id="search-client" onkeyup="filterClients()" placeholder="Buscar por nome ou celular..." class="glass" style="flex: 1; padding: 0.75rem; border-radius: 8px;">
+
+        <div id="customer-modal-error" style="display:none; color:var(--secondary); font-size:0.82rem; margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.2); border-radius:6px;"></div>
+
+        <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+            <button onclick="closeCustomerModal()" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="saveCustomer()" id="save-customer-btn" class="btn btn-primary" style="flex:1; justify-content:center;">
+                <i class="ph ph-check"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Histórico de Compras -->
+<div id="history-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:620px; width:100%; max-height:85vh; overflow-y:auto; padding:2rem; border-radius:16px; position:relative;">
+        <button onclick="closeHistoryModal()" style="position:absolute; right:1.25rem; top:1.25rem; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.25rem;"><i class="ph ph-x"></i></button>
+        <h3 id="history-modal-title" style="margin-bottom:0.25rem;">Histórico de Compras</h3>
+        <p id="history-modal-sub" style="color:var(--text-muted); font-size:0.82rem; margin-bottom:1.5rem;"></p>
+        <div id="history-content"></div>
+    </div>
+</div>
+
+<!-- Modal Confirmação de Exclusão -->
+<div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1001; align-items:center; justify-content:center; padding:1rem;">
+    <div class="glass" style="max-width:380px; width:100%; padding:2rem; border-radius:16px; text-align:center; border:2px solid rgba(244,63,94,0.3);">
+        <div style="width:56px; height:56px; background:rgba(244,63,94,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1rem;">
+            <i class="ph ph-trash" style="color:var(--secondary); font-size:1.75rem;"></i>
+        </div>
+        <h3 style="margin-bottom:0.5rem;">Excluir Cliente?</h3>
+        <p id="delete-modal-name" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;"></p>
+        <div style="display:flex; gap:0.75rem;">
+            <button onclick="closeDeleteModal()" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
+            <button onclick="confirmDelete()" class="btn btn-primary" style="flex:1; justify-content:center; background:var(--secondary); border-color:var(--secondary);">
+                <i class="ph ph-trash"></i> Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Página Principal -->
+<div class="glass" style="padding:1.5rem; margin-bottom:2rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h3 style="font-size:1.25rem; margin-bottom:0.25rem;">Base de Clientes</h3>
+            <p style="color:var(--text-muted); font-size:0.85rem;">Gerencie informações e histórico de compras.</p>
+        </div>
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <input type="text" id="search-client" oninput="filterClients()" placeholder="Buscar por nome ou celular..." class="glass" style="padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; min-width:240px;">
+            <button onclick="openNewCustomerModal()" class="btn btn-primary">
+                <i class="ph ph-plus"></i> Novo Cliente
+            </button>
         </div>
     </div>
 
-    <div style="overflow-x: auto;">
+    <div style="overflow-x:auto;">
         <table>
             <thead>
                 <tr>
                     <th>Nome</th>
                     <th>Celular / WhatsApp</th>
                     <th>E-mail</th>
+                    <th style="text-align:center;">Pontos</th>
                     <th>Total Comprado</th>
                     <th>Última Compra</th>
-                    <th style="text-align: center;">Ações</th>
+                    <th style="text-align:center;">Ações</th>
                 </tr>
             </thead>
             <tbody id="client-list">
-                <tr><td colspan="6" style="text-align: center; padding: 3rem;">Carregando clientes...</td></tr>
+                <tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-muted);">
+                    <i class="ph ph-spinner" style="font-size:1.5rem; display:block; margin-bottom:0.5rem; opacity:0.4;"></i>
+                    Carregando clientes...
+                </td></tr>
             </tbody>
         </table>
     </div>
-</div>
 
-<!-- Modal Histórico -->
-<div id="history-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 2rem;">
-    <div class="glass" style="max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem; position: relative;">
-        <button onclick="closeModal()" style="position: absolute; right: 1.5rem; top: 1.5rem; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem;">
-            <i class="ph ph-x"></i>
-        </button>
-        <h3 id="modal-client-name" style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">Histórico de Compras</h3>
-        <div id="history-content">
-            <!-- Conteúdo dinâmico -->
-        </div>
-    </div>
+    <div id="client-count" style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted); text-align:right;"></div>
 </div>
 
 <script>
     let allClients = [];
+    let editingId = null;
+    let deletingId = null;
 
     async function loadClients() {
         try {
             const res = await fetch('/api/customers');
-            allClients = await res.json();
+            const data = await res.json();
+            if (!res.ok || !Array.isArray(data)) {
+                throw new Error(data.error || `HTTP ${res.status}`);
+            }
+            allClients = data;
             renderClients(allClients);
         } catch (e) {
-            console.error(e);
+            console.error('loadClients:', e);
+            document.getElementById('client-list').innerHTML =
+                `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--secondary);">Erro ao carregar clientes: ${e.message}</td></tr>`;
         }
     }
 
     function renderClients(clients) {
-        const container = document.getElementById('client-list');
-        let html = '';
-        clients.forEach(c => {
-            html += `
+        const tbody = document.getElementById('client-list');
+        const countEl = document.getElementById('client-count');
+
+        if (clients.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-muted);">Nenhum cliente encontrado.</td></tr>';
+            countEl.textContent = '';
+            return;
+        }
+
+        tbody.innerHTML = clients.map(c => {
+            const pts = c.loyalty_points || 0;
+            const ptsColor = pts > 0 ? 'var(--primary-light)' : 'var(--text-muted)';
+            return `
                 <tr>
-                    <td style="font-weight: 600;">${c.name}</td>
-                    <td>${c.phone}</td>
-                    <td style="color: var(--text-muted);">${c.email}</td>
-                    <td style="font-weight: 700; color: var(--primary);">R$ ${c.total_purchased.toFixed(2)}</td>
-                    <td>${c.last_purchase}</td>
-                    <td style="text-align: center;">
-                        <button onclick="viewHistory(${c.id}, '${c.name}')" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.75rem;">
-                            <i class="ph ph-clock-counter-clockwise"></i> Histórico
-                        </button>
+                    <td style="font-weight:600;">${escHtml(c.name)}</td>
+                    <td>${c.phone ? `<a href="https://wa.me/${c.phone}" target="_blank" style="color:var(--accent); text-decoration:none;">${c.phone}</a>` : '<span style="color:var(--text-muted);">—</span>'}</td>
+                    <td style="color:var(--text-muted); font-size:0.85rem;">${escHtml(c.email) || '—'}</td>
+                    <td style="text-align:center;">
+                        <span style="color:${ptsColor}; font-weight:700; font-size:0.85rem;">
+                            ${pts > 0 ? `<i class="ph ph-star-fill" style="font-size:0.7rem;"></i> ${pts}` : '—'}
+                        </span>
                     </td>
-                </tr>
-            `;
-        });
-        container.innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Nenhum cliente encontrado.</td></tr>';
+                    <td style="font-weight:700; color:var(--primary);">R$ ${(c.total_purchased || 0).toFixed(2)}</td>
+                    <td style="color:var(--text-muted); font-size:0.85rem;">${c.last_purchase || '—'}</td>
+                    <td style="text-align:center;">
+                        <div style="display:flex; gap:0.4rem; justify-content:center;">
+                            <button onclick="viewHistory(${c.id}, '${escAttr(c.name)}', ${pts})" title="Histórico" class="btn btn-secondary" style="padding:0.4rem 0.7rem; font-size:0.75rem;">
+                                <i class="ph ph-clock-counter-clockwise"></i>
+                            </button>
+                            <button onclick="openEditModal(${c.id})" title="Editar" class="btn btn-secondary" style="padding:0.4rem 0.7rem; font-size:0.75rem; color:var(--primary);">
+                                <i class="ph ph-pencil"></i>
+                            </button>
+                            <button onclick="openDeleteModal(${c.id}, '${escAttr(c.name)}')" title="Excluir" class="btn btn-secondary" style="padding:0.4rem 0.7rem; font-size:0.75rem; color:var(--secondary);">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+
+        countEl.textContent = `${clients.length} cliente${clients.length !== 1 ? 's' : ''}`;
     }
 
     function filterClients() {
         const term = document.getElementById('search-client').value.toLowerCase();
-        const filtered = allClients.filter(c => 
-            c.name.toLowerCase().includes(term) || c.phone.includes(term)
+        renderClients(term
+            ? allClients.filter(c => c.name.toLowerCase().includes(term) || (c.phone && c.phone.includes(term)) || (c.email && c.email.toLowerCase().includes(term)))
+            : allClients
         );
-        renderClients(filtered);
     }
 
-    async function viewHistory(id, name) {
-        const modal = document.getElementById('history-modal');
-        const content = document.getElementById('history-content');
-        document.getElementById('modal-client-name').innerText = `Compras de ${name}`;
-        
-        content.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando histórico...</p>';
-        modal.style.display = 'flex';
-        
+    // --- MODAL CRIAR/EDITAR ---
+    function openNewCustomerModal() {
+        editingId = null;
+        document.getElementById('customer-modal-title').textContent = 'Novo Cliente';
+        document.getElementById('c-name').value = '';
+        document.getElementById('c-phone').value = '';
+        document.getElementById('c-email').value = '';
+        document.getElementById('c-birthday').value = '';
+        document.getElementById('customer-modal-error').style.display = 'none';
+        document.getElementById('customer-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('c-name').focus(), 100);
+    }
+
+    function openEditModal(id) {
+        const c = allClients.find(x => x.id === id);
+        if (!c) return;
+        editingId = id;
+        document.getElementById('customer-modal-title').textContent = 'Editar Cliente';
+        document.getElementById('c-name').value = c.name;
+        document.getElementById('c-phone').value = c.phone || '';
+        document.getElementById('c-email').value = c.email || '';
+        document.getElementById('c-birthday').value = c.birthday || '';
+        document.getElementById('customer-modal-error').style.display = 'none';
+        document.getElementById('customer-modal').style.display = 'flex';
+        setTimeout(() => document.getElementById('c-name').focus(), 100);
+    }
+
+    function closeCustomerModal() {
+        document.getElementById('customer-modal').style.display = 'none';
+    }
+
+    async function saveCustomer() {
+        const name = document.getElementById('c-name').value.trim();
+        if (!name) { showModalError('Nome é obrigatório.'); return; }
+
+        const payload = {
+            name,
+            phone: document.getElementById('c-phone').value.trim(),
+            email: document.getElementById('c-email').value.trim() || null,
+            birthday: document.getElementById('c-birthday').value || null,
+        };
+
+        const btn = document.getElementById('save-customer-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner"></i> Salvando...';
+
         try {
-            const res = await fetch(`/api/customers/${id}/history`);
-            const history = await res.json();
-            
-            let hHtml = '<table style="width: 100%; border-spacing: 0 8px; border-collapse: separate;">';
-            history.forEach(h => {
-                const color = h.status === 'completed' || h.status === 'paid' ? '#10b981' : (h.status === 'pending' ? '#ffbf00' : '#ef4444');
-                hHtml += `
-                    <tr style="background: rgba(255,255,255,0.02);">
-                        <td style="padding: 0.75rem;">#${h.id}</td>
-                        <td>${h.date}</td>
-                        <td style="font-weight: 700;">R$ ${h.total.toFixed(2)}</td>
-                        <td><span style="color: ${color}; font-size: 0.7rem; font-weight: 800;">${h.status.toUpperCase()}</span></td>
-                    </tr>
-                `;
+            const url = editingId ? `/api/customers/${editingId}` : '/api/customers';
+            const method = editingId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             });
-            hHtml += '</table>';
-            content.innerHTML = hHtml || '<p style="text-align: center; padding: 2rem; color: var(--text-muted);">Sem compras registradas.</p>';
+            const data = await res.json();
+            if (res.ok && data.success) {
+                closeCustomerModal();
+                await loadClients();
+            } else {
+                showModalError(data.error || 'Erro ao salvar.');
+            }
         } catch (e) {
-            content.innerHTML = '<p>Erro ao carregar histórico.</p>';
+            showModalError('Erro de conexão.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-check"></i> Salvar';
         }
     }
 
-    function closeModal() {
+    function showModalError(msg) {
+        const el = document.getElementById('customer-modal-error');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    // --- MODAL EXCLUIR ---
+    function openDeleteModal(id, name) {
+        deletingId = id;
+        document.getElementById('delete-modal-name').textContent = `Tem certeza que deseja excluir "${name}"? Esta ação não pode ser desfeita.`;
+        document.getElementById('delete-modal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').style.display = 'none';
+        deletingId = null;
+    }
+
+    async function confirmDelete() {
+        if (!deletingId) return;
+        try {
+            const res = await fetch(`/api/customers/${deletingId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                closeDeleteModal();
+                await loadClients();
+            } else {
+                alert(data.error || 'Erro ao excluir.');
+            }
+        } catch (e) {
+            alert('Erro de conexão.');
+        }
+    }
+
+    // --- MODAL HISTÓRICO ---
+    async function viewHistory(id, name, points) {
+        const modal = document.getElementById('history-modal');
+        const content = document.getElementById('history-content');
+        document.getElementById('history-modal-title').textContent = `Histórico — ${name}`;
+        document.getElementById('history-modal-sub').textContent = `${points} ponto${points !== 1 ? 's' : ''} de fidelidade`;
+        content.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">Carregando...</p>';
+        modal.style.display = 'flex';
+
+        try {
+            const res = await fetch(`/api/customers/${id}/history`);
+            const history = await res.json();
+
+            if (!history.length) {
+                content.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">Sem compras registradas.</p>';
+                return;
+            }
+
+            content.innerHTML = `
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+                            <th style="text-align:left; padding:0.5rem;">Pedido</th>
+                            <th style="text-align:left; padding:0.5rem;">Data</th>
+                            <th style="text-align:left; padding:0.5rem;">Pagamento</th>
+                            <th style="text-align:right; padding:0.5rem;">Total</th>
+                            <th style="text-align:center; padding:0.5rem;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(h => {
+                            const color = (h.status === 'completed' || h.status === 'paid') ? '#10b981' : (h.status === 'pending' ? '#f59e0b' : '#ef4444');
+                            const label = { completed: 'Concluído', paid: 'Pago', pending: 'Pendente', cancelled: 'Cancelado' }[h.status] || h.status;
+                            return `
+                            <tr style="border-top:1px solid var(--glass-border);">
+                                <td style="padding:0.7rem 0.5rem; font-weight:600;">#${h.id}</td>
+                                <td style="padding:0.7rem 0.5rem; font-size:0.85rem; color:var(--text-muted);">${h.date}</td>
+                                <td style="padding:0.7rem 0.5rem; font-size:0.82rem; color:var(--text-muted);">${h.payment || '—'}</td>
+                                <td style="padding:0.7rem 0.5rem; text-align:right; font-weight:700;">R$ ${Number(h.total).toFixed(2)}</td>
+                                <td style="padding:0.7rem 0.5rem; text-align:center;">
+                                    <span style="color:${color}; font-size:0.7rem; font-weight:800; background:${color}20; padding:2px 8px; border-radius:20px;">${label}</span>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>`;
+        } catch (e) {
+            content.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--secondary);">Erro ao carregar histórico.</p>';
+        }
+    }
+
+    function closeHistoryModal() {
         document.getElementById('history-modal').style.display = 'none';
+    }
+
+    // Fechar modais com ESC
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            closeCustomerModal();
+            closeHistoryModal();
+            closeDeleteModal();
+        }
+    });
+
+    // Enter no modal de cliente salva
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && document.getElementById('customer-modal').style.display === 'flex') {
+            saveCustomer();
+        }
+    });
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(str) {
+        if (!str) return '';
+        return str.replace(/'/g, "\\'");
     }
 
     loadClients();

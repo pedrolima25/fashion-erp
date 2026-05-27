@@ -17,3 +17,6 @@ gunicorn
 segno
 twilio
 httpx
+pytest
+pytest-asyncio
+alembic

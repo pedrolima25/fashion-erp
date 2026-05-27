@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fashion_user
+      POSTGRES_PASSWORD: fashion_pass
+      POSTGRES_DB: fashion_erp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fashion_user -d fashion_erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://fashion_user:fashion_pass@db:5432/fashion_erp
+      SECRET_KEY: dev_secret_key_change_in_production
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8001"
+      PORT: "8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./static:/app/static
+      - ./tokens:/app/tokens
+    command: gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
+
+volumes:
+  postgres_data:

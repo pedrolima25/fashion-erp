@@ -1,13 +1,58 @@
-from database import Company, Product, ProductVariation, Category, Customer, Sale, SaleItem, get_manaus_time
+from database import Company, Product, ProductVariation, Category, Customer, Sale, SaleItem, ChatSession, get_manaus_time
+from datetime import timedelta
 import json
 import logging
 
 logger = logging.getLogger(__name__)
 
-rule_states = {}
+SESSION_TTL_HOURS = 24
 
-def get_state_key(company_id: int, client_phone: str) -> str:
-    return f"{company_id}:{client_phone}"
+
+def _load_state(db, company_id: int, phone: str):
+    """Carrega o estado da conversa do banco. Retorna None se não existir ou expirado."""
+    cutoff = get_manaus_time() - timedelta(hours=SESSION_TTL_HOURS)
+    session = db.query(ChatSession).filter(
+        ChatSession.company_id == company_id,
+        ChatSession.phone == phone,
+        ChatSession.updated_at >= cutoff
+    ).first()
+    if not session:
+        return None
+    try:
+        return json.loads(session.state_json)
+    except Exception:
+        return None
+
+
+def _save_state(db, company_id: int, phone: str, state: dict):
+    """Salva ou atualiza o estado da conversa no banco."""
+    now = get_manaus_time()
+    session = db.query(ChatSession).filter(
+        ChatSession.company_id == company_id,
+        ChatSession.phone == phone
+    ).first()
+    if session:
+        session.state_json = json.dumps(state, ensure_ascii=False)
+        session.updated_at = now
+    else:
+        session = ChatSession(
+            company_id=company_id,
+            phone=phone,
+            state_json=json.dumps(state, ensure_ascii=False),
+            updated_at=now
+        )
+        db.add(session)
+    db.commit()
+
+
+def _delete_state(db, company_id: int, phone: str):
+    """Remove a sessão de conversa do banco."""
+    db.query(ChatSession).filter(
+        ChatSession.company_id == company_id,
+        ChatSession.phone == phone
+    ).delete()
+    db.commit()
+
 
 def get_category_emoji(name: str):
     name = name.lower()
@@ -18,26 +63,27 @@ def get_category_emoji(name: str):
     if any(k in name for k in ['acessorio', 'bolsa', 'bone', 'relogio']): return "🕶️"
     return "🏷️"
 
+
 def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
-    state_key = get_state_key(company_id, client_phone)
-    is_new = state_key not in rule_states
-    state = rule_states.get(state_key, {'active': True, 'step': 0, 'cart': []})
+    db_state = _load_state(db, company_id, client_phone)
+    is_new = db_state is None
+    state = db_state if db_state is not None else {'active': True, 'step': 0, 'cart': []}
     text = msg.strip().lower()
 
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company: return "❌ *Erro de configuração.*"
-    
+
     comp_name = company.name or "Nossa Loja"
     comp_fee = company.delivery_fee or 0.0
-    
+
     # Comandos Globais
     if text in ["oi", "olá", "ola", "voltar", "menu", "cancelar"] or is_new:
         state['step'] = 0
-        rule_states[state_key] = state
-        
+        _save_state(db, company_id, client_phone, state)
+
         now_h = get_manaus_time().hour
         greet = "Bom dia" if 5 <= now_h < 12 else ("Boa tarde" if 12 <= now_h < 18 else "Boa noite")
-        
+
         menu = (f"{greet}! 👗✨ Bem-vinda(o) à *{comp_name}*.\n\n"
                 "Como podemos te ajudar hoje?\n\n"
                 "1️⃣ *Ver Coleções*\n"
@@ -46,7 +92,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                 "4️⃣ *Catálogo Completo*\n"
                 "5️⃣ *Endereço da Loja*\n"
                 "6️⃣ *Sugestões Personalizadas* (IA)")
-        
+
         if state.get('cart'):
             menu += f"\n\n🛒 *Seu Carrinho possui {len(state['cart'])} item(s).*\nDigite *Carrinho* para ver ou finalizar."
 
@@ -57,30 +103,32 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     # Carrinho (Atalho)
     if text == "carrinho":
         if not state.get('cart'): return "Seu carrinho está vazio! 🛍️"
-        return show_cart(state)
+        return show_cart(state, db, company_id, client_phone)
 
     if state['step'] == 0:
         if text == "1":
             state['step'] = 1
             categories = db.query(Category).filter(Category.company_id == company_id).all()
             if not categories: return "Sem coleções no momento."
-            
+
             menu_cat = "📂 *NOSSAS COLEÇÕES*\n\n"
             state['cat_map'] = {}
             for i, c in enumerate(categories, 1):
                 menu_cat += f"{i}️⃣ *{c.name}*\n"
                 state['cat_map'][str(i)] = c.id
-            rule_states[state_key] = state
+            _save_state(db, company_id, client_phone, state)
             return menu_cat
-            
+
         elif text == "2":
             return "📣 *Entendido!* Um consultor falará com você em instantes. 🙏"
-        
+
         elif text == "3":
-            # MEUS PEDIDOS
-            sales = db.query(Sale).join(Customer).filter(Customer.phone == client_phone, Sale.company_id == company_id).order_by(Sale.date.desc()).limit(5).all()
+            sales = db.query(Sale).join(Customer).filter(
+                Customer.phone == client_phone,
+                Sale.company_id == company_id
+            ).order_by(Sale.date.desc()).limit(5).all()
             if not sales: return "Você ainda não possui pedidos conosco. 🛍️"
-            
+
             msg_pedidos = "📦 *SEUS ÚLTIMOS PEDIDOS*\n\n"
             for s in sales:
                 status_traducao = {"pending": "⏳ Pendente", "paid": "✅ Pago", "completed": "🚀 Enviado/Pronto", "cancelled": "❌ Cancelado"}
@@ -88,7 +136,11 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             return msg_pedidos + "Digite *Menu* para voltar."
 
         elif text == "4":
-            products = db.query(Product).filter(Product.company_id == company_id, Product.active == True, Product.show_on_whatsapp == True).all()
+            products = db.query(Product).filter(
+                Product.company_id == company_id,
+                Product.active == True,
+                Product.show_on_whatsapp == True
+            ).all()
             if not products: return "Catálogo vazio."
             state['step'] = 2
             state['prod_map'] = {}
@@ -97,7 +149,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                 state['prod_map'][str(i)] = p.id
                 if p.image_base64 and i <= 15:
                     msg_list.append({"image": p.image_base64, "text": f"{i}️⃣ *{p.name}*\n💰 R$ {p.base_price:.2f}"})
-            rule_states[state_key] = state
+            _save_state(db, company_id, client_phone, state)
             return {"text": "🛍️ *CATÁLOGO COMPLETO*\nDigite o número para ver detalhes.", "image_list": msg_list}
 
         elif text == "5":
@@ -113,22 +165,30 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     elif state['step'] == 1:
         cat_id = state.get('cat_map', {}).get(text)
         if cat_id:
-            products = db.query(Product).filter(Product.category_id == cat_id, Product.active == True, Product.show_on_whatsapp == True).all()
+            products = db.query(Product).filter(
+                Product.category_id == cat_id,
+                Product.active == True,
+                Product.show_on_whatsapp == True
+            ).all()
             if not products: return "Sem itens nesta coleção."
             state['step'] = 2
             state['prod_map'] = {}
             msg_list = []
             for i, p in enumerate(products, 1):
                 state['prod_map'][str(i)] = p.id
-                if p.image_base64: msg_list.append({"image": p.image_base64, "text": f"{i}️⃣ *{p.name}*\n💰 R$ {p.base_price:.2f}"})
-            rule_states[state_key] = state
+                if p.image_base64:
+                    msg_list.append({"image": p.image_base64, "text": f"{i}️⃣ *{p.name}*\n💰 R$ {p.base_price:.2f}"})
+            _save_state(db, company_id, client_phone, state)
             return {"text": "✨ *ITENS DISPONÍVEIS*\nEscolha pelo número:", "image_list": msg_list}
 
     elif state['step'] == 2:
         prod_id = state.get('prod_map', {}).get(text)
         if prod_id:
             product = db.query(Product).filter(Product.id == prod_id).first()
-            variations = db.query(ProductVariation).filter(ProductVariation.product_id == prod_id, ProductVariation.stock_quantity > 0).all()
+            variations = db.query(ProductVariation).filter(
+                ProductVariation.product_id == prod_id,
+                ProductVariation.stock_quantity > 0
+            ).all()
             if not variations: return "Infelizmente este modelo esgotou. 😔"
             state['step'] = 3
             state['var_map'] = {}
@@ -136,7 +196,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             for i, v in enumerate(variations, 1):
                 detail += f"{i}️⃣ {v.size} {('('+v.color+')') if v.color else ''}\n"
                 state['var_map'][str(i)] = v.id
-            rule_states[state_key] = state
+            _save_state(db, company_id, client_phone, state)
             if product.image_base64: return {"text": detail, "image_base64": product.image_base64}
             return detail
 
@@ -149,12 +209,12 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
                 "variation_id": variation.id,
                 "name": variation.product.name,
                 "size": variation.size,
-                "price": variation.price_override or variation.product.base_price,
+                "price": float(variation.price_override or variation.product.base_price),
                 "quantity": 1
             }
             state['cart'].append(item)
             state['step'] = 3.5
-            rule_states[state_key] = state
+            _save_state(db, company_id, client_phone, state)
             return (f"✅ *{item['name']} (Tam {item['size']})* adicionado!\n\n"
                     "Deseja fazer mais o quê?\n"
                     "1️⃣ *Ver mais roupas (Continuar)*\n"
@@ -164,47 +224,52 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
     elif state['step'] == 3.5:
         if text == "1":
             state['step'] = 0
+            _save_state(db, company_id, client_phone, state)
             return process_with_rules(client_phone, "menu", db, company_id)
         elif text == "2":
-            return show_cart(state)
+            return show_cart(state, db, company_id, client_phone)
         elif text == "3":
             state['cart'] = []
             state['step'] = 0
+            _save_state(db, company_id, client_phone, state)
             return "Carrinho limpo! Voltando ao menu..."
 
-    elif state['step'] == 4: # Checkout: Nome
+    elif state['step'] == 4:  # Checkout: Nome
         state['client_name'] = msg.strip()
         state['step'] = 5
-        rule_states[state_key] = state
+        _save_state(db, company_id, client_phone, state)
         return (f"Ótimo, *{msg.strip()}*! Como prefere receber?\n\n"
                 f"1️⃣ *Retirada na Loja* (Grátis)\n"
                 f"2️⃣ *Entrega* (R$ {comp_fee:.2f})")
 
-    elif state['step'] == 5: # Checkout: Entrega
+    elif state['step'] == 5:  # Checkout: Entrega
         if text == "1":
-            state['delivery_type'] = 'pickup'; state['delivery_fee'] = 0.0; state['address'] = "Retirada na Loja"
-            return finalize_cart_sale(client_phone, state, db, company_id, state_key)
+            state['delivery_type'] = 'pickup'
+            state['delivery_fee'] = 0.0
+            state['address'] = "Retirada na Loja"
+            return finalize_cart_sale(client_phone, state, db, company_id)
         elif text == "2":
-            state['delivery_type'] = 'delivery'; state['delivery_fee'] = comp_fee
+            state['delivery_type'] = 'delivery'
+            state['delivery_fee'] = float(comp_fee)
             state['step'] = 6
-            rule_states[state_key] = state
+            _save_state(db, company_id, client_phone, state)
             return "📍 Digite seu *Endereço Completo* (Rua, Número e Bairro):"
 
-    elif state['step'] == 6: # Checkout: Endereço
+    elif state['step'] == 6:  # Checkout: Endereço
         state['address'] = msg.strip()
         state['step'] = 7
-        rule_states[state_key] = state
+        _save_state(db, company_id, client_phone, state)
         return "Agora envie um *ponto de referência* para facilitar a entrega. Ex: casa azul, perto da padaria. Se não tiver, digite *pular*."
 
-    elif state['step'] == 7: # Checkout: Referencia
+    elif state['step'] == 7:  # Checkout: Referencia
         state['delivery_reference'] = "" if text in ["pular", "nao", "não", "sem"] else msg.strip()
         state['step'] = 8
-        rule_states[state_key] = state
+        _save_state(db, company_id, client_phone, state)
         return ("Por fim, envie sua *localização pelo WhatsApp*.\n\n"
                 "Toque no clipe/anexo > *Localização* > *Localização atual*.\n"
                 "Se preferir, cole o link do Google Maps. Se não conseguir, digite *pular*.")
 
-    elif state['step'] == 8: # Checkout: Localizacao
+    elif state['step'] == 8:  # Checkout: Localizacao
         location_text = msg.strip()
         if text in ["pular", "nao", "não", "sem"]:
             state['delivery_location_link'] = ""
@@ -212,11 +277,12 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             state['delivery_location_link'] = location_text.replace("LOCALIZACAO_WHATSAPP ", "", 1).strip()
         else:
             state['delivery_location_link'] = location_text
-        return finalize_cart_sale(client_phone, state, db, company_id, state_key)
+        return finalize_cart_sale(client_phone, state, db, company_id)
 
     return "Não entendi. Digite *Menu*."
 
-def show_cart(state):
+
+def show_cart(state, db, company_id, phone):
     msg = "🛒 *SEU CARRINHO*\n\n"
     total = 0
     for i, item in enumerate(state['cart'], 1):
@@ -224,18 +290,24 @@ def show_cart(state):
         total += item['price']
     msg += f"\n💰 *Subtotal: R$ {total:.2f}*\n\nDigite *Sim* para fechar o pedido ou *Menu* para continuar comprando."
     state['step'] = 3.9
+    _save_state(db, company_id, phone, state)
     return msg
 
-def finalize_cart_sale(client_phone, state, db, company_id, state_key):
+
+def finalize_cart_sale(client_phone, state, db, company_id):
     try:
-        customer = db.query(Customer).filter(Customer.phone == client_phone, Customer.company_id == company_id).first()
+        customer = db.query(Customer).filter(
+            Customer.phone == client_phone,
+            Customer.company_id == company_id
+        ).first()
         if not customer:
             customer = Customer(name=state.get('client_name', 'Cliente'), phone=client_phone, company_id=company_id)
-            db.add(customer); db.flush()
-        
+            db.add(customer)
+            db.flush()
+
         total_items = sum(i['price'] for i in state['cart'])
         total = total_items + state.get('delivery_fee', 0.0)
-        
+
         new_sale = Sale(
             company_id=company_id,
             customer_id=customer.id,
@@ -248,14 +320,27 @@ def finalize_cart_sale(client_phone, state, db, company_id, state_key):
             delivery_status="waiting" if state.get('delivery_type') == "delivery" else None,
             status="pending"
         )
-        db.add(new_sale); db.flush()
-        
+        db.add(new_sale)
+        db.flush()
+
         for i in state['cart']:
-            si = SaleItem(sale_id=new_sale.id, product_id=i['product_id'], variation_id=i['variation_id'], quantity=1, unit_price=i['price'])
+            si = SaleItem(
+                sale_id=new_sale.id,
+                product_id=i['product_id'],
+                variation_id=i['variation_id'],
+                quantity=1,
+                unit_price=i['price']
+            )
             db.add(si)
-        
+
+        # Deleta sessão na mesma transação da venda (atômico)
+        db.query(ChatSession).filter(
+            ChatSession.company_id == company_id,
+            ChatSession.phone == client_phone
+        ).delete()
+
         db.commit()
-        
+
         # Notificação Vendedor
         from whatsapp_service import whatsapp_manager
         company = db.query(Company).filter(Company.id == company_id).first()
@@ -275,67 +360,75 @@ def finalize_cart_sale(client_phone, state, db, company_id, state_key):
 
         # PIX
         from payments import generate_pix_payment
-        pix_code = generate_pix_payment(total, f"Pedido #{new_sale.id}", static_key=company.pix_key, company_name=company.name).get('qr_code', 'Erro PIX')
-        
+        pix_code = generate_pix_payment(
+            total, f"Pedido #{new_sale.id}",
+            static_key=company.pix_key,
+            company_name=company.name
+        ).get('qr_code', 'Erro PIX')
+
         msg = (f"🥳 *Pedido #{new_sale.id} Recebido!*\n\n"
                f"💰 *Total: R$ {total:.2f}*\n"
-               f"📍 *Logística:* {'Retirada' if state['delivery_type']=='pickup' else 'Entrega'}")
+               f"📍 *Logística:* {'Retirada' if state['delivery_type'] == 'pickup' else 'Entrega'}")
         if state.get('delivery_type') == 'delivery':
             msg += (f"\n🏠 *Endereço:* {state.get('address') or '-'}"
                     f"\n📌 *Referência:* {state.get('delivery_reference') or '-'}"
                     f"\n🗺️ *Localização:* {state.get('delivery_location_link') or '-'}")
         msg += f"\n\n🔑 *PIX Copia e Cola:*\n`{pix_code}`\n\nAguardamos seu pagamento! ✨"
-        
-        del rule_states[state_key]
+
         return msg
     except Exception as e:
-        logger.error(f"Erro checkout: {e}"); db.rollback(); return "Erro ao finalizar."
+        logger.error(f"Erro checkout: {e}")
+        db.rollback()
+        return "Erro ao finalizar."
+
 
 def get_ai_suggestions(client_phone: str, db, company_id: int):
     """Sugere produtos com base no histórico do cliente."""
-    customer = db.query(Customer).filter(Customer.phone == client_phone, Customer.company_id == company_id).first()
+    customer = db.query(Customer).filter(
+        Customer.phone == client_phone,
+        Customer.company_id == company_id
+    ).first()
     if not customer: return None
-    
-    # Busca últimas compras
-    last_sales = db.query(Sale).filter(Sale.customer_id == customer.id).order_by(Sale.date.desc()).limit(3).all()
+
+    last_sales = db.query(Sale).filter(
+        Sale.customer_id == customer.id
+    ).order_by(Sale.date.desc()).limit(3).all()
     if not last_sales: return None
-    
-    # Pega as categorias que ele mais compra
+
     cat_ids = []
     for s in last_sales:
         for item in s.items:
             cat_ids.append(item.product.category_id)
-    
+
     if not cat_ids: return None
-    
-    # Busca itens novos ou diferentes nessas categorias
+
     suggestions = db.query(Product).filter(
         Product.company_id == company_id,
         Product.category_id.in_(cat_ids),
         Product.active == True,
         Product.show_on_whatsapp == True
     ).order_by(Product.created_at.desc()).limit(3).all()
-    
+
     if not suggestions: return None
-    
+
     msg = "✨ *SUGESTÕES PARA VOCÊ* ✨\nCom base no seu estilo, acho que vai amar estes itens:\n\n"
     img_list = []
     for i, p in enumerate(suggestions, 1):
         msg += f"🔹 *{p.name}* - R$ {p.base_price:.2f}\n"
         if p.image_base64:
             img_list.append({"image": p.image_base64, "text": f"*{p.name}*\n💰 R$ {p.base_price:.2f}"})
-            
+
     return {"text": msg + "\nDigite o nome de um item para ver detalhes ou *Menu*.", "image_list": img_list}
 
+
 def process_message(client_phone: str, message: str, db=None, company_id: int = None) -> str:
-    state_key = get_state_key(company_id, client_phone)
     if message.strip().lower() in ["menu", "sair", "cancelar"]:
-        if state_key in rule_states: del rule_states[state_key]
-    
-    # Lógica de Checkout (Sim para finalizar)
-    state = rule_states.get(state_key)
-    if state and state['step'] == 3.9 and message.strip().lower() in ["sim", "finalizar", "fechar"]:
+        _delete_state(db, company_id, client_phone)
+
+    state = _load_state(db, company_id, client_phone)
+    if state and state.get('step') == 3.9 and message.strip().lower() in ["sim", "finalizar", "fechar"]:
         state['step'] = 4
+        _save_state(db, company_id, client_phone, state)
         return "Para finalizar, qual o seu *Nome Completo*?"
-        
+
     return process_with_rules(client_phone, message, db, company_id)
