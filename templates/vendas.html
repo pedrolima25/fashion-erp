@@ -392,8 +392,8 @@
             card.onmouseleave = () => card.style.transform='';
             card.onclick = () => hasStock && openVariationModal(p);
 
-            const imgHtml = p.image_base64
-                ? `<img src="data:image/jpeg;base64,${p.image_base64}" alt="" style="width:100%;height:110px;object-fit:cover;">`
+            const imgHtml = p.image
+                ? `<img src="data:image/jpeg;base64,${p.image}" alt="" style="width:100%;height:110px;object-fit:cover;">`
                 : `<div style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;"><i class="ph ph-shirt" style="font-size:2rem;opacity:0.2;"></i></div>`;
 
             const stockBadge = !hasStock
