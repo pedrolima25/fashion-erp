@@ -361,7 +361,28 @@
             const res = await fetch('/api/products?include_images=false');
             products = await res.json();
             renderProducts(products);
+            lazyLoadImages();
         } catch(e) { console.error('Erro ao carregar produtos', e); }
+    }
+
+    async function lazyLoadImages() {
+        const imgs = document.querySelectorAll('img[data-product-id]');
+        // Carregar em lotes de 5 para não sobrecarregar
+        for (let i = 0; i < imgs.length; i += 5) {
+            const batch = Array.from(imgs).slice(i, i + 5);
+            await Promise.all(batch.map(async img => {
+                const pid = img.dataset.productId;
+                try {
+                    const r = await fetch(`/api/products/${pid}/image`);
+                    const d = await r.json();
+                    if (d.image) {
+                        img.src = d.image;
+                        img.style.display = 'block';
+                        img.previousElementSibling && (img.previousElementSibling.style.display = 'none');
+                    }
+                } catch(e) {}
+            }));
+        }
     }
 
     async function loadCategories() {
@@ -392,9 +413,11 @@
             card.onmouseleave = () => card.style.transform='';
             card.onclick = () => hasStock && openVariationModal(p);
 
-            const imgHtml = p.image
-                ? `<img src="${p.image}" style="width:100%;height:110px;object-fit:cover;">`
-                : `<div style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;"><i class="ph ph-shirt" style="font-size:2rem;opacity:0.2;"></i></div>`;
+            const imgHtml = `
+                <div class="img-placeholder" style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;">
+                    <i class="ph ph-shirt" style="font-size:2rem;opacity:0.2;"></i>
+                </div>
+                <img data-product-id="${p.id}" src="" alt="" style="width:100%;height:110px;object-fit:cover;display:none;">`;
 
             const stockBadge = !hasStock
                 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">ESGOTADO</span>`
