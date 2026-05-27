@@ -121,9 +121,11 @@ def create_customer(data: CustomerCreate, request: Request, db: Session = Depend
 @router.put("/api/customers/{customer_id}")
 def update_customer(customer_id: int, data: CustomerUpdate, request: Request, db: Session = Depends(get_db)):
     cid = int(request.session.get("company_id"))
-    customer = db.query(Customer).filter(Customer.id == customer_id, Customer.company_id == cid).first()
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         return JSONResponse(status_code=404, content={"error": "Cliente não encontrado."})
+    if customer.company_id and customer.company_id != cid:
+        return JSONResponse(status_code=403, content={"error": "Sem permissão."})
     phone_clean = "".join(filter(str.isdigit, data.phone)) if data.phone else ""
     if phone_clean and phone_clean != customer.phone:
         existing = db.query(Customer).filter(
@@ -142,15 +144,16 @@ def update_customer(customer_id: int, data: CustomerUpdate, request: Request, db
 @router.delete("/api/customers/{customer_id}")
 def delete_customer(customer_id: int, request: Request, db: Session = Depends(get_db)):
     raw_cid = request.session.get("company_id")
-    logger.info(f"DELETE customer {customer_id} | session company_id={raw_cid!r} type={type(raw_cid)}")
     if not raw_cid:
         return JSONResponse(status_code=401, content={"error": "Sessão expirada."})
     cid = int(raw_cid)
-    customer = db.query(Customer).filter(Customer.id == customer_id, Customer.company_id == cid).first()
-    logger.info(f"Query: id={customer_id} company_id={cid} → found={customer}")
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         return JSONResponse(status_code=404, content={"error": "Cliente não encontrado."})
-    db.query(Sale).filter(Sale.customer_id == customer_id, Sale.company_id == cid).update(
+    if customer.company_id and customer.company_id != cid:
+        return JSONResponse(status_code=403, content={"error": "Sem permissão."})
+    # Desvincula vendas para não violar FK
+    db.query(Sale).filter(Sale.customer_id == customer_id).update(
         {"customer_id": None}, synchronize_session=False
     )
     db.delete(customer)
