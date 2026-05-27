@@ -41,8 +41,8 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 # --- RATE LIMIT CONFIG ---
-LOGIN_MAX_ATTEMPTS = 5
-LOGIN_WINDOW_MINUTES = 15
+LOGIN_MAX_ATTEMPTS = 10
+LOGIN_WINDOW_MINUTES = 3
 
 
 # --- BACKGROUND TASKS ---
