@@ -1,5 +1,7 @@
+import csv
+import io
 from typing import Optional
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -182,6 +184,56 @@ def delete_product(product_id: int, request: Request, db: Session = Depends(get_
     product.active = False
     db.commit()
     return {"success": True}
+
+
+@router.post("/api/products/import-csv")
+async def import_products_csv(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    if not cid:
+        return JSONResponse(status_code=401, content={"error": "Sessão expirada."})
+    cid = int(cid)
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except Exception:
+        text = content.decode("latin-1")
+    reader = csv.DictReader(io.StringIO(text))
+    created = 0
+    errors = []
+    products_cache = {}
+    for i, row in enumerate(reader, start=2):
+        try:
+            name = (row.get("nome") or row.get("name") or "").strip()
+            price = float((row.get("preco_venda") or row.get("preco") or row.get("price") or "0").replace(",", "."))
+            cost = float((row.get("preco_custo") or row.get("custo") or row.get("cost") or "0").replace(",", "."))
+            size = (row.get("tamanho") or row.get("size") or "U").strip()
+            color = (row.get("cor") or row.get("color") or "").strip()
+            stock = int(float((row.get("estoque") or row.get("stock") or "0").replace(",", ".")))
+            if not name:
+                errors.append(f"Linha {i}: nome vazio")
+                continue
+            if name not in products_cache:
+                p = db.query(Product).filter(Product.company_id == cid, Product.name == name).first()
+                if not p:
+                    p = Product(company_id=cid, name=name, base_price=price, cost_price=cost, active=True)
+                    db.add(p)
+                    db.flush()
+                products_cache[name] = p
+            prod = products_cache[name]
+            existing_var = db.query(ProductVariation).filter(
+                ProductVariation.product_id == prod.id,
+                ProductVariation.size == size,
+                ProductVariation.color == (color or None),
+            ).first()
+            if existing_var:
+                existing_var.stock_quantity += stock
+            else:
+                db.add(ProductVariation(product_id=prod.id, size=size, color=color or None, stock_quantity=stock))
+            created += 1
+        except Exception as e:
+            errors.append(f"Linha {i}: {str(e)}")
+    db.commit()
+    return {"success": True, "created": created, "errors": errors}
 
 
 @router.get("/api/products/labels")

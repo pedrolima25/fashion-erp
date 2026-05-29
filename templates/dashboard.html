@@ -156,8 +156,37 @@
     <div id="low-stock-list" style="display:flex;flex-wrap:wrap;gap:0.5rem;font-size:0.8rem;"></div>
 </div>
 
+<!-- Modal Sangria/Suprimento -->
+<div id="modal-movimento" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem;">
+    <div class="glass" style="max-width:400px;width:100%;padding:2rem;border-radius:20px;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+            <div id="mov-icon" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <i id="mov-icon-i" style="font-size:1.5rem;"></i>
+            </div>
+            <h3 id="mov-title" style="margin:0;font-size:1.1rem;"></h3>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.75rem;color:var(--text-muted);font-weight:600;display:block;margin-bottom:0.4rem;">VALOR (R$)</label>
+            <input id="mov-amount" type="number" min="0.01" step="0.01" placeholder="0,00"
+                   style="width:100%;padding:0.875rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;font-size:1.1rem;text-align:center;"
+                   onkeydown="if(event.key==='Enter') confirmMovimento()">
+        </div>
+        <div style="margin-bottom:1.5rem;">
+            <label style="font-size:0.75rem;color:var(--text-muted);font-weight:600;display:block;margin-bottom:0.4rem;">DESCRIÇÃO (opcional)</label>
+            <input id="mov-desc" type="text" placeholder="Ex: Pagamento fornecedor, troco..."
+                   style="width:100%;padding:0.75rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;font-size:0.9rem;"
+                   onkeydown="if(event.key==='Enter') confirmMovimento()">
+        </div>
+        <div id="mov-error" style="display:none;color:var(--secondary);font-size:0.85rem;margin-bottom:1rem;"></div>
+        <div style="display:flex;gap:0.75rem;">
+            <button onclick="document.getElementById('modal-movimento').style.display='none'" class="btn btn-secondary" style="flex:1;justify-content:center;">Cancelar</button>
+            <button id="mov-btn-ok" onclick="confirmMovimento()" class="btn btn-primary" style="flex:1;justify-content:center;"></button>
+        </div>
+    </div>
+</div>
+
 <!-- CONTROLE DE CAIXA -->
-<div id="cash-banner" class="glass" style="display: none; padding: 1rem 1.5rem; margin-bottom: 2rem; border: 1px solid var(--primary); background: rgba(99, 102, 241, 0.05); align-items: center; justify-content: space-between;">
+<div id="cash-banner" class="glass" style="display: none; padding: 1rem 1.5rem; margin-bottom: 2rem; border: 1px solid var(--primary); background: rgba(99, 102, 241, 0.05); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
     <div style="display: flex; align-items: center; gap: 1rem;">
         <div style="width: 45px; height: 45px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center;">
             <i class="ph ph-wallet" style="color: white; font-size: 1.5rem;"></i>
@@ -167,9 +196,17 @@
             <div id="cash-info" style="font-size: 0.85rem; color: var(--text-muted);">Iniciado às --:-- com R$ 0,00</div>
         </div>
     </div>
-    <button onclick="closeCash()" class="btn btn-secondary" style="border-color: var(--secondary); color: var(--secondary);">
-        <i class="ph ph-lock"></i> Fechar Caixa
-    </button>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button onclick="openMovimento('suprimento')" class="btn btn-secondary" style="padding:0.5rem 1rem;font-size:0.82rem;border-color:rgba(16,185,129,0.4);color:#10b981;">
+            <i class="ph ph-arrow-circle-down"></i> Suprimento
+        </button>
+        <button onclick="openMovimento('sangria')" class="btn btn-secondary" style="padding:0.5rem 1rem;font-size:0.82rem;border-color:rgba(245,158,11,0.4);color:#f59e0b;">
+            <i class="ph ph-arrow-circle-up"></i> Sangria
+        </button>
+        <button onclick="closeCash()" class="btn btn-secondary" style="padding:0.5rem 1rem;font-size:0.82rem;border-color:rgba(239,68,68,0.3);color:#ef4444;">
+            <i class="ph ph-lock"></i> Fechar Caixa
+        </button>
+    </div>
 </div>
 
 <div id="no-cash-banner" class="glass" style="display: none; padding: 1rem 1.5rem; margin-bottom: 2rem; border: 1px solid var(--secondary); background: rgba(244, 63, 94, 0.05); align-items: center; justify-content: space-between;">
@@ -638,6 +675,42 @@
             } catch (e) {}
         }
         window.checkCashStatus = checkCashStatus;
+
+        let currentMovType = 'sangria';
+        window.openMovimento = function(type) {
+            currentMovType = type;
+            const isSangria = type === 'sangria';
+            document.getElementById('mov-title').textContent = isSangria ? 'Sangria de Caixa' : 'Suprimento de Caixa';
+            document.getElementById('mov-icon').style.background = isSangria ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
+            document.getElementById('mov-icon-i').className = isSangria ? 'ph ph-arrow-circle-up' : 'ph ph-arrow-circle-down';
+            document.getElementById('mov-icon-i').style.color = isSangria ? '#f59e0b' : '#10b981';
+            document.getElementById('mov-btn-ok').textContent = isSangria ? 'Registrar Sangria' : 'Registrar Suprimento';
+            document.getElementById('mov-btn-ok').style.background = isSangria ? '#f59e0b' : '#10b981';
+            document.getElementById('mov-amount').value = '';
+            document.getElementById('mov-desc').value = '';
+            document.getElementById('mov-error').style.display = 'none';
+            document.getElementById('modal-movimento').style.display = 'flex';
+            setTimeout(() => document.getElementById('mov-amount').focus(), 100);
+        };
+        window.confirmMovimento = async function() {
+            const amount = parseFloat(document.getElementById('mov-amount').value);
+            const desc = document.getElementById('mov-desc').value;
+            const errEl = document.getElementById('mov-error');
+            errEl.style.display = 'none';
+            if (!amount || amount <= 0) { errEl.textContent = 'Informe um valor válido.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await apiFetch('/api/cash/movement', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({type: currentMovType, amount, description: desc})
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao registrar.');
+                document.getElementById('modal-movimento').style.display = 'none';
+                const label = currentMovType === 'sangria' ? 'Sangria' : 'Suprimento';
+                showToast(`${label} de R$ ${amount.toFixed(2)} registrado!`);
+            } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+        };
 
         async function loadGoal() {
             try {

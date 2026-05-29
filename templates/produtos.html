@@ -8,8 +8,12 @@
 <div class="glass" style="padding: 1.5rem; margin-bottom: 2rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h3 style="font-size: 1.25rem;">Lista de Produtos</h3>
-        <div style="display: flex; gap: 1rem;">
-            <button class="btn btn-secondary" onclick="openCategoryModal()" style="font-size: 0.85rem;"><i class="fas fa-tags"></i> Gerenciar Categorias</button>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-secondary" onclick="openCategoryModal()" style="font-size: 0.85rem;"><i class="fas fa-tags"></i> Categorias</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('csv-import-input').click()" style="font-size:0.85rem;border-color:rgba(16,185,129,0.4);color:#10b981;" title="Colunas: nome, preco_venda, preco_custo, tamanho, cor, estoque">
+                <i class="ph ph-upload-simple"></i> Importar CSV
+            </button>
+            <input id="csv-import-input" type="file" accept=".csv" style="display:none;" onchange="importCSV(this)">
             <button class="btn btn-primary" onclick="openProductModal()"><i class="fas fa-plus"></i> Novo Produto</button>
         </div>
     </div>
@@ -366,6 +370,31 @@
         const qty = prompt("Quantas etiquetas deseja imprimir?", "1");
         if (qty && !isNaN(qty)) {
             window.open(`/api/products/labels?product_id=${productId}&qty=${qty}`, '_blank');
+        }
+    }
+
+    async function importCSV(input) {
+        const file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        const formData = new FormData();
+        formData.append('file', file);
+        const btn = document.querySelector('[onclick*="csv-import"]');
+        try {
+            const res = await fetch('/api/products/import-csv', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                let msg = `✅ ${data.created} variações importadas com sucesso!`;
+                if (data.errors && data.errors.length > 0) {
+                    msg += `\n\n⚠️ Avisos:\n${data.errors.slice(0, 5).join('\n')}`;
+                }
+                alert(msg);
+                loadProducts();
+            } else {
+                alert('Erro ao importar: ' + (data.error || 'Falha desconhecida.'));
+            }
+        } catch (e) {
+            alert('Erro de conexão ao importar CSV.');
         }
     }
 

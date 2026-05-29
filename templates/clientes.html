@@ -77,7 +77,21 @@
             <p style="color:var(--text-muted); font-size:0.85rem;">Gerencie informações e histórico de compras.</p>
         </div>
         <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
-            <input type="text" id="search-client" oninput="filterClients()" placeholder="Buscar por nome ou celular..." class="glass" style="padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; min-width:240px;">
+            <input type="text" id="search-client" oninput="filterClients()" placeholder="Buscar por nome ou celular..." class="glass" style="padding:0.7rem 1rem; border-radius:8px; font-size:0.85rem; min-width:200px; flex:1;">
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                <button onclick="setSegment('all')" id="seg-all" class="btn btn-primary" style="font-size:0.8rem; padding:0.5rem 0.75rem;">
+                    <i class="ph ph-users"></i> Todos
+                </button>
+                <button onclick="setSegment('inactive30')" id="seg-inactive30" class="btn btn-secondary" style="font-size:0.8rem; padding:0.5rem 0.75rem;">
+                    <i class="ph ph-clock"></i> Inativos 30d
+                </button>
+                <button onclick="setSegment('inactive60')" id="seg-inactive60" class="btn btn-secondary" style="font-size:0.8rem; padding:0.5rem 0.75rem;">
+                    <i class="ph ph-clock"></i> 60d
+                </button>
+                <button onclick="setSegment('birthdays')" id="seg-birthdays" class="btn btn-secondary" style="font-size:0.8rem; padding:0.5rem 0.75rem;">
+                    <i class="ph ph-cake"></i> Aniversariantes
+                </button>
+            </div>
             <button onclick="openNewCustomerModal()" class="btn btn-primary">
                 <i class="ph ph-plus"></i> Novo Cliente
             </button>
@@ -113,6 +127,65 @@
     let allClients = [];
     let editingId = null;
     let deletingId = null;
+    let currentSegment = 'all';
+
+    async function setSegment(seg) {
+        currentSegment = seg;
+        document.getElementById('search-client').value = '';
+        ['all','inactive30','inactive60','birthdays'].forEach(s => {
+            const btn = document.getElementById('seg-' + s);
+            if (btn) btn.className = s === seg ? 'btn btn-primary' : 'btn btn-secondary';
+            if (btn && s === seg) btn.style.cssText = 'font-size:0.8rem;padding:0.5rem 0.75rem;';
+            else if (btn) btn.style.cssText = 'font-size:0.8rem;padding:0.5rem 0.75rem;';
+        });
+        if (seg === 'all') { await loadClients(); return; }
+        const tbody = document.getElementById('clients-tbody');
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+        try {
+            let url = seg === 'birthdays' ? '/api/customers/segments/birthdays'
+                    : seg === 'inactive30' ? '/api/customers/segments/inactive?days=30'
+                    : '/api/customers/segments/inactive?days=60';
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!Array.isArray(data)) throw new Error('Erro ao carregar segmento.');
+            if (seg === 'birthdays') {
+                renderBirthdays(data);
+            } else {
+                renderInactive(data);
+            }
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--secondary);">${e.message}</td></tr>`;
+        }
+    }
+
+    function renderInactive(clients) {
+        const tbody = document.getElementById('clients-tbody');
+        const countEl = document.getElementById('clients-count');
+        countEl.textContent = `${clients.length} cliente${clients.length !== 1 ? 's' : ''} inativos`;
+        tbody.innerHTML = clients.length === 0
+            ? '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted);">Nenhum cliente inativo neste período.</td></tr>'
+            : clients.map(c => `<tr>
+                <td><b>${escHtml(c.name)}</b></td>
+                <td><a href="https://wa.me/55${c.phone}" target="_blank" style="color:#25d366;">${c.phone || '—'}</a></td>
+                <td colspan="2" style="color:var(--text-muted);">Última compra: ${c.last_purchase}</td>
+                <td>${c.loyalty_points} <i class="ph ph-star" style="color:#f59e0b;"></i></td>
+                <td colspan="3"></td>
+            </tr>`).join('');
+    }
+
+    function renderBirthdays(clients) {
+        const tbody = document.getElementById('clients-tbody');
+        const countEl = document.getElementById('clients-count');
+        countEl.textContent = `${clients.length} aniversariante${clients.length !== 1 ? 's' : ''} este mês`;
+        tbody.innerHTML = clients.length === 0
+            ? '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted);">Nenhum aniversariante este mês.</td></tr>'
+            : clients.map(c => `<tr>
+                <td><b>🎂 ${escHtml(c.name)}</b></td>
+                <td><a href="https://wa.me/55${c.phone}" target="_blank" style="color:#25d366;">${c.phone || '—'}</a></td>
+                <td colspan="2" style="color:var(--text-muted);">Aniversário: ${c.birthday}</td>
+                <td colspan="4"></td>
+            </tr>`).join('');
+    }
 
     async function loadClients() {
         try {

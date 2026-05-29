@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
@@ -6,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from database import get_db, manaus_tz, Customer, Sale
+from database import get_db, get_manaus_time, manaus_tz, Customer, Sale
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,57 @@ def delete_customer(customer_id: int, request: Request, db: Session = Depends(ge
     db.delete(customer)
     db.commit()
     return {"success": True}
+
+
+@router.get("/api/customers/segments/inactive")
+def get_inactive_customers(request: Request, db: Session = Depends(get_db), days: int = 30):
+    cid = request.session.get("company_id")
+    if not cid:
+        return JSONResponse(status_code=401, content={"error": "Sessão expirada."})
+    cid = int(cid)
+    cutoff = get_manaus_time() - timedelta(days=days)
+    last_sale = (
+        db.query(Sale.customer_id, func.max(Sale.date).label("last"))
+        .filter(Sale.company_id == cid, Sale.status != "cancelled", Sale.customer_id.isnot(None))
+        .group_by(Sale.customer_id)
+        .subquery()
+    )
+    customers = (
+        db.query(Customer)
+        .join(last_sale, last_sale.c.customer_id == Customer.id)
+        .filter(Customer.company_id == cid, last_sale.c.last < cutoff)
+        .order_by(last_sale.c.last)
+        .all()
+    )
+    result = []
+    for c in customers:
+        last = db.query(func.max(Sale.date)).filter(Sale.customer_id == c.id).scalar()
+        result.append({
+            "id": c.id, "name": c.name or "", "phone": c.phone or "",
+            "last_purchase": _fmt_date(last),
+            "loyalty_points": int(c.loyalty_points or 0),
+        })
+    return result
+
+
+@router.get("/api/customers/segments/birthdays")
+def get_birthday_customers(request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    if not cid:
+        return JSONResponse(status_code=401, content={"error": "Sessão expirada."})
+    cid = int(cid)
+    now = get_manaus_time()
+    month_str = f"-{now.month:02d}-"
+    customers = (
+        db.query(Customer)
+        .filter(Customer.company_id == cid, Customer.birthday.isnot(None), Customer.birthday.contains(month_str))
+        .order_by(Customer.name)
+        .all()
+    )
+    return [
+        {"id": c.id, "name": c.name or "", "phone": c.phone or "", "birthday": c.birthday or ""}
+        for c in customers
+    ]
 
 
 @router.get("/api/customers/{customer_id}/history")

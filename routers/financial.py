@@ -25,6 +25,12 @@ class CashOpen(BaseModel):
     amount: float = 0.0
 
 
+class CashMovement(BaseModel):
+    type: str  # "sangria" ou "suprimento"
+    amount: float
+    description: str = ""
+
+
 class ExpenseCreate(BaseModel):
     category: str
     description: str
@@ -127,6 +133,32 @@ def close_cash(request: Request, db: Session = Depends(get_db)):
     cash.closed_at = get_manaus_time()
     db.commit()
     return {"success": True, "final_balance": cash.closing_balance}
+
+
+@router.post("/api/cash/movement")
+def cash_movement(request: Request, data: CashMovement, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    if not cid:
+        return JSONResponse(status_code=401, content={"error": "Sessão expirada."})
+    cid = int(cid)
+    cash = get_open_cash(db, cid)
+    if not cash:
+        return JSONResponse(status_code=400, content={"error": "Caixa não está aberto."})
+    if data.amount <= 0:
+        return JSONResponse(status_code=400, content={"error": "Valor deve ser maior que zero."})
+    label = "Sangria" if data.type == "sangria" else "Suprimento"
+    desc = data.description.strip() or f"{label} de caixa"
+    db.add(Transaction(
+        company_id=cid,
+        type="despesa" if data.type == "sangria" else "receita",
+        category="Caixa",
+        amount=data.amount,
+        description=desc,
+        payment_method="Dinheiro",
+        date=get_manaus_time(),
+    ))
+    db.commit()
+    return {"success": True}
 
 
 # --- EXPENSES ---
