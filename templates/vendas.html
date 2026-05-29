@@ -74,8 +74,18 @@
             <i class="ph ph-lock"></i> Fechar Caixa
         </button>
     </div>
-    
-    <div class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; position: relative;">
+
+    <!-- Abas Mobile -->
+    <div class="pdv-mobile-tabs" style="grid-column: 1 / -1;">
+        <button class="pdv-mobile-tab active" id="tab-btn-products" onclick="switchPdvTab('products')">
+            <i class="ph ph-storefront"></i> Produtos
+        </button>
+        <button class="pdv-mobile-tab" id="tab-btn-cart" onclick="switchPdvTab('cart')">
+            <i class="ph ph-shopping-bag"></i> Carrinho <span id="tab-cart-badge" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:1px 7px;font-size:0.75rem;"></span>
+        </button>
+    </div>
+
+    <div id="pdv-catalog-panel" class="glass" style="padding: 1.5rem; display: flex; flex-direction: column; position: relative;">
         <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
             <div style="position: relative; flex: 1;">
                 <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
@@ -96,7 +106,7 @@
     </div>
 
     <!-- Coluna da Direita: Carrinho -->
-    <div class="glass pdv-cart" style="padding: 1.25rem; display:flex; flex-direction:column; gap:0;">
+    <div id="pdv-cart-panel" class="glass pdv-cart" style="padding: 1.25rem; display:flex; flex-direction:column; gap:0;">
 
         <!-- Cabeçalho carrinho -->
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
@@ -221,13 +231,19 @@
             <i class="ph ph-check-circle" style="font-size:1.4rem;"></i> FINALIZAR (F2)
         </button>
         
-        <div style="display:flex; justify-content:center; gap:15px; margin-top:1rem; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+        <div class="pdv-keyboard-hints" style="display:flex; justify-content:center; gap:15px; margin-top:1rem; font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
             <span><b style="color:var(--primary);">F1</b> BUSCAR</span>
             <span><b style="color:var(--primary);">F2</b> FINALIZAR</span>
             <span><b style="color:var(--primary);">ESC</b> LIMPAR</span>
         </div>
     </div>
 </div>
+
+<!-- Botão flutuante Carrinho (mobile) -->
+<button class="pdv-cart-fab" id="pdv-cart-fab" onclick="switchPdvTab('cart')" style="display:none;">
+    <i class="ph ph-shopping-bag"></i>
+    <span id="fab-cart-label">Ver Carrinho</span>
+</button>
 
 <style>
     .btn-tiny {
@@ -255,7 +271,7 @@
 </style>
 
 <!-- Modal de Variações -->
-<div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 420px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+<div id="variation-modal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: min(420px, 94vw); padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
         <h3 id="modal-title" style="margin:0;">Escolha o Tamanho</h3>
         <button onclick="closeModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.25rem;"><i class="ph ph-x"></i></button>
@@ -494,6 +510,41 @@
             });
         }
         updateCartTotals();
+        updateMobileCartBadge();
+    }
+
+    function updateMobileCartBadge() {
+        const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+        const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        const badge = document.getElementById('tab-cart-badge');
+        const fab = document.getElementById('pdv-cart-fab');
+        const fabLabel = document.getElementById('fab-cart-label');
+        if (badge) badge.textContent = totalItems > 0 ? totalItems : '';
+        const isMobile = window.innerWidth <= 768;
+        const onProductsTab = !document.getElementById('pdv-catalog-panel').classList.contains('pdv-panel-hidden');
+        if (fab) {
+            fab.style.display = (isMobile && onProductsTab && totalItems > 0) ? 'flex' : 'none';
+            if (fabLabel) fabLabel.textContent = `Ver Carrinho (${totalItems}) · R$ ${total.toFixed(2)}`;
+        }
+    }
+
+    function switchPdvTab(tab) {
+        const catalog = document.getElementById('pdv-catalog-panel');
+        const cartPanel = document.getElementById('pdv-cart-panel');
+        const btnProducts = document.getElementById('tab-btn-products');
+        const btnCart = document.getElementById('tab-btn-cart');
+        if (tab === 'products') {
+            catalog.classList.remove('pdv-panel-hidden');
+            cartPanel.classList.add('pdv-panel-hidden');
+            btnProducts.classList.add('active');
+            btnCart.classList.remove('active');
+        } else {
+            catalog.classList.add('pdv-panel-hidden');
+            cartPanel.classList.remove('pdv-panel-hidden');
+            btnCart.classList.add('active');
+            btnProducts.classList.remove('active');
+        }
+        updateMobileCartBadge();
     }
 
     function changeQty(index, delta) {
