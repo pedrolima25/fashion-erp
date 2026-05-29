@@ -69,74 +69,91 @@
 </audio>
 
 <div class="dashboard-grid">
-    <!-- Vendas Hoje -->
+    <!-- Faturamento Hoje -->
     <div class="glass glass-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div class="widget-title">Faturamento (Hoje)</div>
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.1); display: flex; align-items: center; justify-content: center;">
-                <i class="ph ph-trend-up" style="color: var(--primary); font-size: 1.25rem;"></i>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
+            <div class="widget-title">Faturamento Hoje</div>
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;">
+                <i class="ph ph-trend-up" style="color:var(--primary);font-size:1.25rem;"></i>
             </div>
         </div>
         <div class="widget-value" id="val-vendas-hoje">R$ 0,00</div>
+        <div style="display:flex;gap:1rem;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);">
+            <span id="val-count-hoje"><i class="ph ph-receipt"></i> 0 vendas</span>
+            <span id="val-variacao" style="font-weight:700;"></span>
+        </div>
     </div>
 
-    <!-- Meta Mensal (NOVO FASE 3) -->
+    <!-- Ticket Médio -->
     <div class="glass glass-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-            <div class="widget-title">Meta do Mês</div>
-            <div id="goal-percent" style="font-weight: 800; color: var(--accent); font-size: 0.9rem;">0%</div>
-        </div>
-        <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.75rem; overflow: hidden; border: 1px solid var(--glass-border);">
-            <div id="goal-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600;">
-            <span id="goal-current">R$ 0,00</span>
-            <span id="goal-target" style="color: var(--text-muted);">R$ 0,00</span>
-        </div>
-    </div>
-
-    <!-- ALERTAS DE ESTOQUE (NOVO FASE 2) -->
-    <div class="glass glass-card" id="card-low-stock" style="display: none; border-color: rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div class="widget-title" style="color: var(--secondary);">Estoque Baixo</div>
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(244, 63, 94, 0.1); display: flex; align-items: center; justify-content: center;">
-                <i class="ph ph-warning" style="color: var(--secondary); font-size: 1.25rem;"></i>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+            <div class="widget-title">Ticket Médio</div>
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;">
+                <i class="ph ph-tag" style="color:var(--accent);font-size:1.25rem;"></i>
             </div>
         </div>
-        <div id="low-stock-list" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.4rem;">
-            <!-- Itens injetados via JS -->
-        </div>
+        <div class="widget-value" id="val-ticket-medio" style="color:var(--accent);">R$ 0,00</div>
+        <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);">por venda hoje</div>
     </div>
 
     <!-- Pedidos Pendentes -->
-    <div class="glass glass-card" style="border: 1px solid #ffbf00; box-shadow: 0 0 15px rgba(255, 191, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div class="widget-title" style="color: #ffbf00;">Pendentes</div>
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(255, 191, 0, 0.1); display: flex; align-items: center; justify-content: center;">
-                <i class="ph ph-hand-coins" style="color: #ffbf00; font-size: 1.25rem;"></i>
+    <div class="glass glass-card" style="border:1px solid #ffbf00;box-shadow:0 0 15px rgba(255,191,0,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+            <div class="widget-title" style="color:#ffbf00;">Pendentes</div>
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,191,0,0.1);display:flex;align-items:center;justify-content:center;">
+                <i class="ph ph-hand-coins" style="color:#ffbf00;font-size:1.25rem;"></i>
             </div>
         </div>
-        <div class="widget-value" id="val-pendentes" style="color: #ffbf00;">0</div>
+        <div class="widget-value" id="val-pendentes" style="color:#ffbf00;">0</div>
+        <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);">aguardando confirmação</div>
     </div>
 
     <!-- Clientes -->
     <div class="glass glass-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
             <div class="widget-title">Clientes</div>
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center;">
-                <i class="ph ph-users-three" style="color: var(--accent); font-size: 1.25rem;"></i>
+            <div style="width:40px;height:40px;border-radius:10px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;">
+                <i class="ph ph-users-three" style="color:var(--accent);font-size:1.25rem;"></i>
             </div>
         </div>
         <div class="widget-value" id="val-clientes">0</div>
+        <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);">cadastrados</div>
     </div>
 
     <!-- Status do Bot -->
     <div class="glass glass-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
             <div class="widget-title">Bot WhatsApp</div>
-            <div id="val-bot-status" style="font-weight: 700;">Localizando...</div>
+            <div id="val-bot-status" style="font-weight:700;">Verificando...</div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">integração de mensagens</div>
+    </div>
+
+    <!-- Meta Mensal -->
+    <div class="glass glass-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem;">
+            <div class="widget-title">Meta do Mês</div>
+            <div id="goal-percent" style="font-weight:800;color:var(--accent);font-size:0.9rem;">0%</div>
+        </div>
+        <div style="height:10px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;border:1px solid var(--glass-border);">
+            <div id="goal-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width 0.8s cubic-bezier(0.4,0,0.2,1);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.75rem;font-weight:600;">
+            <span id="goal-current">R$ 0,00</span>
+            <span id="goal-target" style="color:var(--text-muted);">R$ 0,00</span>
         </div>
     </div>
+</div>
+
+<!-- Alerta Estoque Baixo (faixa) -->
+<div id="card-low-stock" style="display:none;background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.3);border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;color:var(--secondary);">
+            <i class="ph ph-warning-circle"></i> Estoque Crítico
+        </div>
+        <a href="/produtos" style="font-size:0.75rem;color:var(--primary);font-weight:700;">Ver produtos →</a>
+    </div>
+    <div id="low-stock-list" style="display:flex;flex-wrap:wrap;gap:0.5rem;font-size:0.8rem;"></div>
 </div>
 
 <!-- CONTROLE DE CAIXA -->
@@ -178,7 +195,7 @@
     </div>
 </div>
 
-<div class="dashboard-grid" style="grid-template-columns: 2fr 1fr;">
+<div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 2rem;">
     <div class="glass" style="padding: 1.5rem;">
         <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="ph ph-clock-counter-clockwise"></i> Últimos Pedidos</h3>
         <div style="overflow-x: auto;">
@@ -201,14 +218,19 @@
         </div>
     </div>
 
-    <div class="glass" style="padding: 1.5rem;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem;">Ajuda Rápida</h3>
-        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
-            💡 Clique no <strong>Botão Verde</strong> apenas após confirmar que o PIX caiu na sua conta ou o pagamento local foi recebido.
-        </p>
-        <button onclick="window.location.reload()" class="btn btn-secondary" style="width: 100%; margin-top: 1.5rem; justify-content: center;">
-            <i class="ph ph-arrows-clockwise"></i> Recarregar Painel
-        </button>
+    <div class="glass" style="padding: 1.5rem; display:flex; flex-direction:column; gap:0;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;"><i class="ph ph-fire" style="color:#f59e0b;"></i> Top Produtos Hoje</h3>
+        <div id="top-produtos-list" style="display:flex;flex-direction:column;gap:0.5rem;flex:1;">
+            <div style="text-align:center;color:var(--text-muted);padding:2rem 0;font-size:0.85rem;">Nenhuma venda hoje ainda.</div>
+        </div>
+        <div style="border-top:1px solid var(--glass-border);padding-top:1rem;margin-top:1rem;">
+            <p style="font-size:0.75rem;color:var(--text-muted);line-height:1.6;">
+                💡 <strong>Dica:</strong> Confirme o PIX apenas após verificar que o valor caiu na sua conta.
+            </p>
+            <button onclick="loadStats()" class="btn btn-secondary" style="width:100%;margin-top:0.75rem;justify-content:center;font-size:0.82rem;">
+                <i class="ph ph-arrows-clockwise"></i> Atualizar
+            </button>
+        </div>
     </div>
 </div>
 
@@ -409,6 +431,36 @@
                 document.getElementById('val-vendas-hoje').innerText = `R$ ${data.vendas_hoje.toFixed(2)}`;
                 document.getElementById('val-clientes').innerText = data.total_clientes;
                 document.getElementById('val-pendentes').innerText = data.pedidos_pendentes;
+                document.getElementById('val-ticket-medio').innerText = `R$ ${(data.ticket_medio || 0).toFixed(2)}`;
+                document.getElementById('val-count-hoje').innerHTML = `<i class="ph ph-receipt"></i> ${data.vendas_count_hoje} ${data.vendas_count_hoje === 1 ? 'venda' : 'vendas'}`;
+
+                const variacaoEl = document.getElementById('val-variacao');
+                if (data.variacao_pct !== null && data.variacao_pct !== undefined) {
+                    const pct = data.variacao_pct;
+                    const isUp = pct >= 0;
+                    variacaoEl.innerHTML = `<span style="color:${isUp ? '#10b981' : '#ef4444'};"><i class="ph ph-trend-${isUp ? 'up' : 'down'}"></i> ${isUp ? '+' : ''}${pct.toFixed(1)}% vs ontem</span>`;
+                } else {
+                    variacaoEl.innerHTML = `<span style="color:var(--text-muted);">— sem dados de ontem</span>`;
+                }
+
+                const topList = document.getElementById('top-produtos-list');
+                if (data.top_produtos && data.top_produtos.length > 0) {
+                    const maxQtd = data.top_produtos[0].qtd;
+                    topList.innerHTML = data.top_produtos.map((p, i) => `
+                        <div style="display:flex;align-items:center;gap:0.6rem;">
+                            <span style="font-size:0.75rem;color:var(--text-muted);min-width:16px;text-align:right;">${i+1}.</span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:0.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.name)}</div>
+                                <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:4px;margin-top:3px;overflow:hidden;">
+                                    <div style="height:100%;width:${Math.round(p.qtd/maxQtd*100)}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:4px;"></div>
+                                </div>
+                            </div>
+                            <span style="font-size:0.78rem;font-weight:700;color:var(--accent);white-space:nowrap;">${p.qtd} un</span>
+                        </div>
+                    `).join('');
+                } else {
+                    topList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem 0;font-size:0.85rem;">Nenhuma venda hoje ainda.</div>';
+                }
 
                 if (lastSaleId !== 0 && data.last_sale_id > lastSaleId) {
                     const audio = document.getElementById('audio-tick');
@@ -606,12 +658,14 @@
                 const list = document.getElementById('low-stock-list');
                 if (items.length > 0) {
                     card.style.display = 'block';
-                    list.innerHTML = items.slice(0, 5).map(i => `
-                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.2rem;">
-                            <span>${i.product} (${i.size})</span>
-                            <span style="font-weight:bold; color:var(--secondary);">${i.stock} un</span>
-                        </div>
-                    `).join('');
+                    list.innerHTML = items.map(i => {
+                        const color = i.stock === 0 ? '#ef4444' : '#f59e0b';
+                        const label = i.stock === 0 ? 'ESGOTADO' : `${i.stock} un`;
+                        return `<span style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(0,0,0,0.2);border:1px solid ${color}44;border-radius:20px;padding:3px 10px;font-size:0.75rem;">
+                            <span>${escapeHtml(i.product)} ${i.size ? '(' + escapeHtml(i.size) + ')' : ''}</span>
+                            <span style="font-weight:800;color:${color};">${label}</span>
+                        </span>`;
+                    }).join('');
                 } else { card.style.display = 'none'; }
             } catch (e) {}
         }

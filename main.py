@@ -461,12 +461,51 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     company_id = int(company_id)
     today_start = get_manaus_time().replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
+    yesterday_start = today_start - timedelta(days=1)
+
     vendas_hoje = db.query(func.sum(Sale.total_amount)).filter(
         Sale.company_id == company_id, Sale.date >= today_start, Sale.date < today_end,
+        Sale.status != "cancelled",
     ).scalar() or 0.0
+
+    vendas_count_hoje = db.query(func.count(Sale.id)).filter(
+        Sale.company_id == company_id, Sale.date >= today_start, Sale.date < today_end,
+        Sale.status != "cancelled",
+    ).scalar() or 0
+
+    vendas_ontem = db.query(func.sum(Sale.total_amount)).filter(
+        Sale.company_id == company_id, Sale.date >= yesterday_start, Sale.date < today_start,
+        Sale.status != "cancelled",
+    ).scalar() or 0.0
+
+    ticket_medio = (vendas_hoje / vendas_count_hoje) if vendas_count_hoje > 0 else 0.0
+    variacao_pct = ((vendas_hoje - vendas_ontem) / vendas_ontem * 100) if vendas_ontem > 0 else None
+
+    top_rows = (
+        db.query(
+            Product.name,
+            func.sum(SaleItem.quantity).label("qtd"),
+            func.sum(SaleItem.quantity * SaleItem.unit_price).label("total"),
+        )
+        .join(SaleItem, SaleItem.product_id == Product.id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .filter(
+            Sale.company_id == company_id,
+            Sale.date >= today_start,
+            Sale.date < today_end,
+            Sale.status != "cancelled",
+        )
+        .group_by(Product.id, Product.name)
+        .order_by(func.sum(SaleItem.quantity).desc())
+        .limit(5)
+        .all()
+    )
+    top_produtos = [{"name": t.name, "qtd": int(t.qtd), "total": float(t.total)} for t in top_rows]
+
     total_produtos = db.query(Product).filter(Product.company_id == company_id, Product.active == True).count()
     total_clientes = db.query(Customer).filter(Customer.company_id == company_id).count()
     pedidos_pendentes = db.query(Sale).filter(Sale.company_id == company_id, Sale.status == "pending").count()
+
     recentes = (
         db.query(Sale)
         .options(selectinload(Sale.customer))
@@ -490,6 +529,11 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     ]
     return {
         "vendas_hoje": vendas_hoje,
+        "vendas_count_hoje": vendas_count_hoje,
+        "vendas_ontem": vendas_ontem,
+        "ticket_medio": ticket_medio,
+        "variacao_pct": variacao_pct,
+        "top_produtos": top_produtos,
         "total_produtos": total_produtos,
         "total_clientes": total_clientes,
         "pedidos_pendentes": pedidos_pendentes,
