@@ -524,6 +524,7 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
             "data": r.date.astimezone(manaus_tz).strftime("%H:%M"),
             "cliente": r.customer.name if r.customer else "Final Consumidor",
             "telefone": r.customer.phone if r.customer else "",
+            "tipo_cliente": r.customer.customer_type if r.customer else "varejo",
             "total": r.total_amount,
             "pagamento": r.payment_method,
             "logistica": r.delivery_type if r.delivery_type else "Presencial",

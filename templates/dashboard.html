@@ -513,6 +513,8 @@
                     const isDelivery = v.logistica === 'delivery';
                     const cliente = escapeHtml(v.cliente || 'Final Consumidor');
                     const telefone = escapeHtml(v.telefone || '');
+                    const isWholesale = (v.tipo_cliente || 'varejo') === 'atacado';
+                    const tipoClienteBadge = `<span style="font-size:0.62rem; font-weight:800; padding:1px 6px; border-radius:20px; margin-left:6px; background:${isWholesale ? 'rgba(99,102,241,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isWholesale ? '#6366f1' : '#10b981'};">${isWholesale ? '📦 Atacado' : '🛍️ Varejo'}</span>`;
                     const telefoneDigits = (v.telefone || '').replace(/\D/g, '');
                     const whatsappBtn = telefoneDigits
                         ? `<a href="https://wa.me/55${telefoneDigits}" target="_blank" rel="noopener" title="Chamar no WhatsApp" style="color:#25d366; margin-left:6px;"><i class="ph-bold ph-whatsapp-logo"></i></a>`
@@ -558,7 +560,7 @@
                             <td style="padding: 1rem; font-size: 0.75rem; color: var(--text-muted);">#${v.id}</td>
                             <td style="padding: 1rem; font-size: 0.8rem;">${v.data}</td>
                             <td style="padding: 1rem; font-size: 0.85rem; font-weight: 600;">
-                                <div>${cliente}</div>
+                                <div style="display:flex; align-items:center;">${cliente}${tipoClienteBadge}</div>
                                 <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display:flex; align-items:center;">${telefone || '-'}${whatsappBtn}</div>
                             </td>
                             <td style="padding: 1rem;">
