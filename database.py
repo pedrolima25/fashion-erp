@@ -46,7 +46,7 @@ class Company(Base):
     __tablename__ = "companies"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    category = Column(String, default="Loja de Roupas")
+    category = Column(String, default="Loja de Calçados")
     active = Column(Boolean, default=True)
     is_archived = Column(Boolean, default=False)
 
@@ -61,6 +61,8 @@ class Company(Base):
     delivery_mode = Column(String, default="fixed")
     slug = Column(String, nullable=True, unique=True, index=True)
     monthly_price = Column(Numeric(10, 2, asdecimal=False), default=80.0)
+    show_retail_price = Column(Boolean, default=True)
+    show_wholesale_price = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
     products = relationship("Product", back_populates="company")
@@ -119,9 +121,11 @@ class Product(Base):
     company_id = Column(Integer, ForeignKey("companies.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     name = Column(String, index=True)
+    brand = Column(String, nullable=True, index=True)
     description = Column(Text, nullable=True)
     base_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)
     cost_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)
+    wholesale_price = Column(Numeric(10, 2, asdecimal=False), default=0.0)  # preço de atacado
     image_base64 = Column(Text, nullable=True)
     size_chart = Column(JSON, nullable=True) # Ex: {"M": {"busto": 90, "cintura": 70}, "G": {...}}
     active = Column(Boolean, default=True)
@@ -142,6 +146,7 @@ class ProductVariation(Base):
     stock_quantity = Column(Integer, default=0)
     price_override = Column(Numeric(10, 2, asdecimal=False), nullable=True)
     cost_price_override = Column(Numeric(10, 2, asdecimal=False), nullable=True)
+    wholesale_price_override = Column(Numeric(10, 2, asdecimal=False), nullable=True)
 
     product = relationship("Product", back_populates="variations")
 
@@ -177,6 +182,7 @@ class Customer(Base):
     birthday = Column(String, nullable=True)
     loyalty_points = Column(Integer, default=0)
     total_points_earned = Column(Integer, default=0)
+    customer_type = Column(String, default="varejo")  # "varejo" ou "atacado"
     created_at = Column(DateTime(timezone=True), default=get_manaus_time)
 
 class Sale(Base):
@@ -401,7 +407,7 @@ def populate_initial_data(db):
         db.commit()
 
     if db.query(Company).count() == 0:
-        demo_co = Company(name="Fashion Store Premium", category="Loja de Roupas")
+        demo_co = Company(name="Sapataria Premium", category="Loja de Calçados")
         db.add(demo_co)
         db.commit()
         db.refresh(demo_co)
@@ -426,8 +432,10 @@ def populate_initial_data(db):
 
         cat1 = Category(company_id=demo_co.id, name="Masculino")
         cat2 = Category(company_id=demo_co.id, name="Feminino")
+        cat3 = Category(company_id=demo_co.id, name="Infantil")
         db.add(cat1)
         db.add(cat2)
+        db.add(cat3)
         db.commit()
 
 def run_migrations():
@@ -445,6 +453,10 @@ def run_migrations():
             conn.execute(text("ALTER TABLE companies ADD COLUMN delivery_mode VARCHAR DEFAULT 'fixed'"))
         if 'slug' not in cols_co:
             conn.execute(text("ALTER TABLE companies ADD COLUMN slug VARCHAR"))
+        if 'show_retail_price' not in cols_co:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN show_retail_price BOOLEAN DEFAULT TRUE"))
+        if 'show_wholesale_price' not in cols_co:
+            conn.execute(text("ALTER TABLE companies ADD COLUMN show_wholesale_price BOOLEAN DEFAULT TRUE"))
 
         cols_sales = [c['name'] for c in inspector.get_columns('sales')]
         if 'delivery_type' not in cols_sales:
@@ -485,10 +497,16 @@ def run_migrations():
             conn.execute(text("ALTER TABLE products ADD COLUMN show_on_whatsapp BOOLEAN DEFAULT TRUE"))
         if 'size_chart' not in cols_prod:
             conn.execute(text("ALTER TABLE products ADD COLUMN size_chart JSON"))
+        if 'wholesale_price' not in cols_prod:
+            conn.execute(text("ALTER TABLE products ADD COLUMN wholesale_price FLOAT DEFAULT 0.0"))
+        if 'brand' not in cols_prod:
+            conn.execute(text("ALTER TABLE products ADD COLUMN brand VARCHAR"))
 
         cols_vars = [c['name'] for c in inspector.get_columns('product_variations')]
         if 'cost_price_override' not in cols_vars:
             conn.execute(text("ALTER TABLE product_variations ADD COLUMN cost_price_override FLOAT"))
+        if 'wholesale_price_override' not in cols_vars:
+            conn.execute(text("ALTER TABLE product_variations ADD COLUMN wholesale_price_override FLOAT"))
 
         cols_sched = [c['name'] for c in inspector.get_columns('scheduled_campaigns')]
         if 'frequency' not in cols_sched:
@@ -507,6 +525,8 @@ def run_migrations():
             conn.execute(text("ALTER TABLE customers ADD COLUMN loyalty_points INTEGER DEFAULT 0"))
         if 'total_points_earned' not in cols_cust:
             conn.execute(text("ALTER TABLE customers ADD COLUMN total_points_earned INTEGER DEFAULT 0"))
+        if 'customer_type' not in cols_cust:
+            conn.execute(text("ALTER TABLE customers ADD COLUMN customer_type VARCHAR DEFAULT 'varejo'"))
 
         cols_users = [c['name'] for c in inspector.get_columns('users')]
         if 'role' not in cols_users:
@@ -523,8 +543,8 @@ def run_migrations():
             monetary_migrations = [
                 ("companies", ["delivery_fee", "monthly_price"]),
                 ("expenses", ["amount"]),
-                ("products", ["base_price", "cost_price"]),
-                ("product_variations", ["price_override", "cost_price_override"]),
+                ("products", ["base_price", "cost_price", "wholesale_price"]),
+                ("product_variations", ["price_override", "cost_price_override", "wholesale_price_override"]),
                 ("neighborhoods", ["fee"]),
                 ("sales", ["total_amount", "discount", "delivery_fee"]),
                 ("sale_items", ["unit_price", "cost_price"]),

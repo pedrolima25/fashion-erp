@@ -56,12 +56,14 @@ def _delete_state(db, company_id: int, phone: str):
 
 def get_category_emoji(name: str):
     name = name.lower()
-    if any(k in name for k in ['masc', 'homem', 'men', 'papai', 'social']): return "👕"
-    if any(k in name for k in ['fem', 'mulher', 'vestido', 'saia', 'feminino']): return "👗"
+    if any(k in name for k in ['tenis', 'esportivo', 'sneaker']): return "👟"
+    if any(k in name for k in ['masc', 'homem', 'men', 'papai', 'social']): return "👞"
+    if any(k in name for k in ['fem', 'mulher', 'feminino', 'salto', 'sandalia']): return "👠"
     if any(k in name for k in ['infantil', 'kids', 'criança', 'bebe', 'baby']): return "🧒"
-    if any(k in name for k in ['calcado', 'sapato', 'tenis', 'pe', 'chinelo']): return "👟"
-    if any(k in name for k in ['acessorio', 'bolsa', 'bone', 'relogio']): return "🕶️"
-    return "🏷️"
+    if any(k in name for k in ['chinelo', 'sandalia']): return "🩴"
+    if any(k in name for k in ['bota', 'coturno']): return "🥾"
+    if any(k in name for k in ['acessorio', 'bolsa', 'bone', 'relogio', 'meia']): return "🕶️"
+    return "👟"
 
 
 def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
@@ -217,7 +219,7 @@ def process_with_rules(client_phone: str, msg: str, db, company_id: int) -> str:
             _save_state(db, company_id, client_phone, state)
             return (f"✅ *{item['name']} (Tam {item['size']})* adicionado!\n\n"
                     "Deseja fazer mais o quê?\n"
-                    "1️⃣ *Ver mais roupas (Continuar)*\n"
+                    "1️⃣ *Ver mais produtos (Continuar)*\n"
                     "2️⃣ *Finalizar Pedido (Checkout)*\n"
                     "3️⃣ *Limpar Carrinho*")
 

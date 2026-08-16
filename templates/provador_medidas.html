@@ -26,11 +26,11 @@
         }
         .btn-tiny:hover {
             background: rgba(255,255,255,0.1);
-            color: white;
+            color: var(--text-main);
         }
         .btn-tiny.active {
             background: var(--primary);
-            color: white;
+            color: var(--text-main);
             border-color: var(--primary);
             box-shadow: 0 4px 12px rgba(99,102,241,0.3);
         }
@@ -40,11 +40,11 @@
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
             <div>
                 <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Peso (kg)</label>
-                <input type="number" id="user-weight" placeholder="Ex: 70" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:white; font-size:1.1rem; font-weight:600;">
+                <input type="number" id="user-weight" placeholder="Ex: 70" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color: var(--text-main); font-size:1.1rem; font-weight:600;">
             </div>
             <div>
                 <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Altura (cm)</label>
-                <input type="number" id="user-height" placeholder="Ex: 170" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color:white; font-size:1.1rem; font-weight:600;">
+                <input type="number" id="user-height" placeholder="Ex: 170" style="width:100%; padding:1rem; border-radius:14px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.03); color: var(--text-main); font-size:1.1rem; font-weight:600;">
             </div>
         </div>
 
@@ -84,7 +84,7 @@
         background: rgba(255,255,255,0.03);
         border: 1px solid var(--glass-border);
         border-radius: 10px;
-        color: white;
+        color: var(--text-main);
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;

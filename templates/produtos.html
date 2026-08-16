@@ -10,7 +10,7 @@
         <h3 style="font-size: 1.25rem;">Lista de Produtos</h3>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
             <button class="btn btn-secondary" onclick="openCategoryModal()" style="font-size: 0.85rem;"><i class="fas fa-tags"></i> Categorias</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('csv-import-input').click()" style="font-size:0.85rem;border-color:rgba(16,185,129,0.4);color:#10b981;" title="Colunas: nome, preco_venda, preco_custo, tamanho, cor, estoque">
+            <button class="btn btn-secondary" onclick="document.getElementById('csv-import-input').click()" style="font-size:0.85rem;border-color:rgba(16,185,129,0.4);color:#10b981;" title="Colunas: nome, marca, preco_venda, preco_custo, preco_atacado, tamanho, cor, estoque">
                 <i class="ph ph-upload-simple"></i> Importar CSV
             </button>
             <input id="csv-import-input" type="file" accept=".csv" style="display:none;" onchange="importCSV(this)">
@@ -24,7 +24,7 @@
                 <th style="width: 50px;">Foto</th>
                 <th>Nome</th>
                 <th>Categoria</th>
-                <th>Preço Base</th>
+                <th>Preços</th>
                 <th>Grade (Tamanhos)</th>
                 <th>Estoque Total</th>
                 <th>Ações</th>
@@ -41,66 +41,117 @@
 </div>
 
 <!-- Modal de Produto -->
-<div id="product-modal" class="glass" style="display: none; position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 1000; width: 95%; max-width: 500px; max-height: 95vh; overflow-y: auto; padding: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 1); border: 2px solid var(--primary);">
-    <h3 id="modal-title" style="margin-bottom: 1.5rem; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">Cadastrar Novo Produto</h3>
-    
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
+<div id="product-modal" class="glass" style="display: none; position: fixed; top: 2rem; left: 50%; transform: translateX(-50%); z-index: 1000; width: 95%; max-width: 560px; max-height: 92vh; overflow-y: auto; padding: 0; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 1); border: 1px solid var(--glass-border);">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--glass-border);">
+        <h3 id="modal-title" style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ph ph-shopping-bag-open" style="color: var(--primary);"></i> Cadastrar Novo Produto
+        </h3>
+        <button onclick="closeProductModal()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.25rem; line-height: 1;"><i class="ph ph-x"></i></button>
+    </div>
+
+    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Foto + Nome -->
         <div style="display: flex; gap: 1rem; align-items: start;">
-            <div id="p-image-preview" onclick="document.getElementById('p-image-input').click()" style="width: 100px; height: 100px; border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background: rgba(0,0,0,0.2); flex-shrink: 0;">
-                <i class="fas fa-camera fa-2x" style="opacity: 0.2;"></i>
+            <div id="p-image-preview" onclick="document.getElementById('p-image-input').click()" class="pm-photo" style="width: 96px; height: 96px; flex-shrink: 0;">
+                <div class="pm-photo-placeholder" style="display: flex; flex-direction: column; align-items: center;">
+                    <i class="ph ph-camera-plus" style="font-size: 1.5rem; opacity: 0.35;"></i>
+                    <span style="font-size: 0.6rem; color: var(--text-muted); margin-top: 0.25rem;">Foto</span>
+                </div>
                 <img src="" style="display: none; width: 100%; height: 100%; object-fit: cover;">
             </div>
             <input type="file" id="p-image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
-            <div style="flex: 1;">
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome do Produto</label>
-                <input type="text" id="p-name" placeholder="Ex: Vestido Midi Floral" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="p-show-on-whatsapp" checked style="width: 16px; height: 16px; cursor: pointer;">
-                    <label for="p-show-on-whatsapp" style="font-size: 0.75rem; color: #10b981; cursor: pointer; font-weight: 600;">Exibir no Catálogo do WhatsApp</label>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 0.6rem;">
+                <div>
+                    <label class="pm-label">Nome do Produto</label>
+                    <input type="text" id="p-name" placeholder="Ex: Tênis Esportivo Branco" class="pm-input">
+                </div>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="p-show-on-whatsapp" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: #10b981;">
+                    <span style="font-size: 0.75rem; color: #10b981; font-weight: 600;"><i class="fab fa-whatsapp"></i> Exibir no Catálogo do WhatsApp</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Preços -->
+        <div>
+            <label class="pm-section-label"><i class="ph ph-tag"></i> Preços</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                <div class="pm-price-box" style="border-left-color: #f43f5e;">
+                    <label class="pm-label">Custo</label>
+                    <input type="number" id="p-cost" step="0.01" value="0" class="pm-input" style="color: #f43f5e;" oninput="updateMargin()">
+                </div>
+                <div class="pm-price-box" style="border-left-color: #10b981;">
+                    <label class="pm-label">Venda (Varejo)</label>
+                    <input type="number" id="p-price" step="0.01" placeholder="0,00" class="pm-input" style="color: #10b981;" oninput="updateMargin()">
+                    <div id="p-margin" style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.3rem; min-height: 14px;"></div>
+                </div>
+                <div class="pm-price-box" style="border-left-color: #6366f1;">
+                    <label class="pm-label">Atacado</label>
+                    <input type="number" id="p-wholesale" step="0.01" placeholder="Opcional" class="pm-input" style="color: #6366f1;">
                 </div>
             </div>
         </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+
+        <!-- Marca + Categoria -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Preço de Custo</label>
-                <input type="number" id="p-cost" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: #f43f5e; font-weight: 700;">
+                <label class="pm-label">Marca</label>
+                <input type="text" id="p-brand" placeholder="Ex: Nike" class="pm-input">
             </div>
             <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Preço de Venda</label>
-                <input type="number" id="p-price" step="0.01" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: #10b981; font-weight: 700;">
-            </div>
-            <div>
-                <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Categoria</label>
-                <select id="p-category" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <label class="pm-label">Categoria</label>
+                <select id="p-category" class="pm-input">
                     <option value="">Selecione...</option>
                 </select>
             </div>
         </div>
 
+        <!-- Grade -->
         <div>
-            <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Configurar Grade (Tamanhos e Cores)</label>
-            <div id="variation-container" style="display: flex; flex-direction: column; gap: 0.75rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+            <label class="pm-section-label"><i class="ph ph-ruler"></i> Grade (Tamanhos e Cores)</label>
+            <div class="pm-variation-row" style="padding: 0 0.6rem; margin-bottom: 0.4rem;">
+                <span class="pm-col-hint">Tamanho</span>
+                <span class="pm-col-hint">Cor</span>
+                <span class="pm-col-hint">Estoque</span>
+                <span></span>
+            </div>
+            <div id="variation-container" style="display: flex; flex-direction: column; gap: 0.5rem; background: var(--input-bg); padding: 0.75rem; border-radius: 10px;">
                 <!-- Variações -->
             </div>
-            <button class="btn btn-secondary" onclick="addVariationRow()" style="width: 100%; margin-top: 0.75rem; font-size: 0.8rem; height: 35px;">
+            <button class="btn btn-secondary" onclick="addVariationRow()" style="width: 100%; margin-top: 0.75rem; font-size: 0.8rem; height: 35px; justify-content: center;">
                 <i class="fas fa-plus"></i> Adicionar Tamanho
             </button>
         </div>
     </div>
 
-    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+    <div style="display: flex; gap: 1rem; padding: 1.25rem 1.5rem; border-top: 1px solid var(--glass-border);">
         <button onclick="closeProductModal()" class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancelar</button>
-        <button onclick="saveProduct()" class="btn btn-primary" style="flex: 1; justify-content: center;">Salvar Produto</button>
+        <button onclick="saveProduct()" class="btn btn-primary" style="flex: 1; justify-content: center;"><i class="ph ph-check-circle"></i> Salvar Produto</button>
     </div>
 </div>
+
+<style>
+    .pm-label { display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.4rem; }
+    .pm-section-label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.6rem; }
+    .pm-input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0.7rem 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main); font-weight: 600; font-size: 0.9rem; }
+    .pm-input:focus { outline: none; border-color: var(--primary); }
+    .pm-price-box { border-left: 3px solid; padding-left: 0.75rem; }
+    .pm-photo { border: 2px dashed var(--glass-border); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background: var(--input-bg); transition: border-color 0.2s; }
+    .pm-photo:hover { border-color: var(--primary); }
+    .pm-variation-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1fr) 30px; gap: 0.5rem; align-items: center; }
+    .pm-col-hint { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .pm-variation-row input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0.55rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 0.85rem; }
+    .pm-variation-row input:focus { outline: none; border-color: var(--primary); }
+    .pm-remove-btn { width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(239,68,68,0.1); color: #ef4444; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; transition: background 0.15s; }
+    .pm-remove-btn:hover { background: rgba(239,68,68,0.25); }
+</style>
 
 <!-- Modal de Gerenciamento de Categorias -->
 <div id="category-modal" class="glass" style="display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 1001; width: 90%; max-width: 400px; padding: 1.5rem; border: 2px solid var(--primary);">
     <h3 style="margin-bottom: 1.25rem; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">Gerenciar Categorias</h3>
     
     <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-        <input type="text" id="new-category-name" placeholder="Nova categoria..." style="flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+        <input type="text" id="new-category-name" placeholder="Nova categoria..." style="flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
         <button class="btn btn-primary" onclick="addCategory()" style="padding: 0.6rem 1rem;"><i class="fas fa-plus"></i></button>
     </div>
 
@@ -189,15 +240,19 @@
             const sizes = p.variations.map(v => `<span class="status-badge" style="background: rgba(255,255,255,0.05); font-size: 0.7rem;">${v.size}</span>`).join(' ');
 
             const tr = document.createElement('tr');
-            const imgHtml = p.image ? `<img src="${p.image}" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;">` : `<div style="width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-tshirt" style="opacity: 0.2;"></i></div>`;
+            const imgHtml = p.image ? `<img src="${p.image}" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;">` : `<div style="width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-shoe-prints" style="opacity: 0.2;"></i></div>`;
             
             tr.innerHTML = `
                 <td>${imgHtml}</td>
-                <td style="font-weight: 600;">${p.name}</td>
+                <td>
+                    <div style="font-weight: 600;">${p.name}</div>
+                    ${p.brand ? `<div style="font-size: 0.7rem; color: var(--text-muted);">${p.brand}</div>` : ''}
+                </td>
                 <td style="color: var(--text-muted);">${p.category}</td>
                 <td>
                     <div style="font-size: 0.7rem; color: var(--text-muted);">Custo: R$ ${p.cost ? p.cost.toFixed(2) : '0.00'}</div>
-                    <div style="font-weight: 700; color: var(--accent);">Venda: R$ ${p.price.toFixed(2)}</div>
+                    <div style="font-weight: 700; color: var(--accent);">Varejo: R$ ${p.price.toFixed(2)}</div>
+                    ${p.wholesale_price ? `<div style="font-size: 0.75rem; font-weight: 700; color: #6366f1;">Atacado: R$ ${p.wholesale_price.toFixed(2)}</div>` : ''}
                 </td>
                 <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${sizes}</div></td>
                 <td><span style="font-weight: 700; color: ${stockTotal <= 5 ? 'var(--secondary)' : 'var(--accent)'};">${stockTotal} un</span></td>
@@ -227,16 +282,25 @@
     function addVariationRow(size = '', stock = 0, color = '') {
         const container = document.getElementById('variation-container');
         const div = document.createElement('div');
-        div.style.display = 'grid';
-        div.style.gridTemplateColumns = '1.5fr 1.5fr 1fr 40px';
-        div.style.gap = '0.5rem';
+        div.className = 'pm-variation-row';
         div.innerHTML = `
-            <input type="text" placeholder="Tam (P, M...)" value="${size}" class="v-size" style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white;">
-            <input type="text" placeholder="Cor (Azul...)" value="${color}" class="v-color" style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white;">
-            <input type="number" placeholder="Estoq." value="${stock}" class="v-stock" style="padding: 0.5rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: white;">
-            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--secondary);"><i class="fas fa-times"></i></button>
+            <input type="text" placeholder="Ex: 39" value="${size}" class="v-size">
+            <input type="text" placeholder="Ex: Branco" value="${color}" class="v-color">
+            <input type="number" placeholder="0" value="${stock}" class="v-stock">
+            <button onclick="this.parentElement.remove()" class="pm-remove-btn" title="Remover"><i class="fas fa-times"></i></button>
         `;
         container.appendChild(div);
+    }
+
+    function updateMargin() {
+        const cost = parseFloat(document.getElementById('p-cost').value) || 0;
+        const price = parseFloat(document.getElementById('p-price').value) || 0;
+        const el = document.getElementById('p-margin');
+        if (price <= 0) { el.textContent = ''; return; }
+        const profit = price - cost;
+        const margin = (profit / price) * 100;
+        const color = margin >= 30 ? '#10b981' : (margin >= 10 ? '#f59e0b' : '#ef4444');
+        el.innerHTML = `<span style="color:${color};font-weight:700;">Margem: ${margin.toFixed(0)}%</span> · Lucro R$ ${profit.toFixed(2)}`;
     }
 
     function openProductModal(p = null) {
@@ -245,16 +309,19 @@
         document.getElementById('variation-container').innerHTML = '';
         const previewCont = document.getElementById('p-image-preview');
         const previewImg = previewCont.querySelector('img');
-        const cameraIcon = previewCont.querySelector('i');
+        const cameraIcon = previewCont.querySelector('.pm-photo-placeholder');
 
         if (p) {
             document.getElementById('modal-title').innerText = 'Editar Produto';
             document.getElementById('p-name').value = p.name;
+            document.getElementById('p-brand').value = p.brand || '';
             document.getElementById('p-price').value = p.price;
             document.getElementById('p-cost').value = p.cost || 0;
+            document.getElementById('p-wholesale').value = p.wholesale_price || '';
             document.getElementById('p-category').value = categories.find(c => c.name === p.category)?.id || '';
             document.getElementById('p-show-on-whatsapp').checked = p.show_on_whatsapp;
-            
+            updateMargin();
+
             if (p.image) {
                 previewImg.src = p.image;
                 previewImg.style.display = 'block';
@@ -262,7 +329,7 @@
                 currentImageBase64 = p.image;
             } else {
                 previewImg.style.display = 'none';
-                cameraIcon.style.display = 'block';
+                cameraIcon.style.display = 'flex';
                 currentImageBase64 = null;
             }
 
@@ -272,16 +339,20 @@
             productEditingId = null;
             document.getElementById('modal-title').innerText = 'Cadastrar Novo Produto';
             document.getElementById('p-name').value = '';
+            document.getElementById('p-brand').value = '';
             document.getElementById('p-price').value = '';
             document.getElementById('p-cost').value = '';
+            document.getElementById('p-wholesale').value = '';
             document.getElementById('p-category').value = '';
             document.getElementById('p-show-on-whatsapp').checked = true;
+            document.getElementById('p-margin').textContent = '';
             previewImg.style.display = 'none';
-            cameraIcon.style.display = 'block';
+            cameraIcon.style.display = 'flex';
             currentImageBase64 = null;
-            addVariationRow('P');
-            addVariationRow('M');
-            addVariationRow('G');
+            addVariationRow('38');
+            addVariationRow('39');
+            addVariationRow('40');
+            addVariationRow('41');
         }
     }
 
@@ -296,7 +367,7 @@
             currentImageBase64 = e.target.result;
             const previewCont = document.getElementById('p-image-preview');
             const previewImg = previewCont.querySelector('img');
-            const cameraIcon = previewCont.querySelector('i');
+            const cameraIcon = previewCont.querySelector('.pm-photo-placeholder');
             previewImg.src = currentImageBase64;
             previewImg.style.display = 'block';
             cameraIcon.style.display = 'none';
@@ -336,8 +407,10 @@
 
         const data = {
             name,
+            brand: document.getElementById('p-brand').value.trim() || null,
             base_price: price,
             cost_price: parseFloat(document.getElementById('p-cost').value) || 0,
+            wholesale_price: parseFloat(document.getElementById('p-wholesale').value) || 0,
             category_id: categoryId ? parseInt(categoryId) : null,
             image_base64: currentImageBase64,
             show_on_whatsapp: document.getElementById('p-show-on-whatsapp').checked,

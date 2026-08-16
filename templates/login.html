@@ -4,16 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Fashion ERP Pro</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <script>(function(){try{var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="stylesheet" href="/static/style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/static/theme.js" defer></script>
     <style>
         body {
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            background: #020617;
+            background: var(--login-bg);
             overflow: hidden;
         }
         .login-container {
@@ -46,15 +48,14 @@
             padding: 0.85rem 1.25rem;
             border-radius: 12px;
             border: 1px solid var(--glass-border);
-            background: rgba(15, 23, 42, 0.6);
-            color: white;
+            background: var(--input-bg-strong);
+            color: var(--text-main);
             transition: all 0.3s ease;
         }
         .form-group input:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
-            background: rgba(15, 23, 42, 0.8);
         }
         .bg-blur {
             position: fixed;
@@ -65,16 +66,24 @@
             opacity: 0.2;
             z-index: 1;
         }
+        .login-theme-toggle {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
+    <button id="theme-toggle-btn" class="theme-toggle login-theme-toggle" onclick="toggleTheme()" title="Mudar tema"><i class="ph-bold ph-sun"></i></button>
+
     <div class="bg-blur" style="background: var(--primary); top: -100px; left: -100px;"></div>
     <div class="bg-blur" style="background: var(--secondary); bottom: -100px; right: -100px;"></div>
 
     <div class="login-container">
         <div class="glass login-card">
             <div style="width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 16px; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);">
-                <i class="ph-bold ph-sketch-logo" style="color: white; font-size: 2rem;"></i>
+                <i class="ph-bold ph-sketch-logo" style="color: var(--text-main); font-size: 2rem;"></i>
             </div>
             
             <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.5px;">Bem-vindo ao <span style="color: var(--primary);">PRO</span></h1>

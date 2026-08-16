@@ -32,7 +32,7 @@
         <h3 style="margin-bottom:0.5rem;">Abrir Caixa</h3>
         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Informe o saldo inicial em dinheiro.</p>
         <input id="cash-open-amount" type="number" min="0" step="0.01" value="0" placeholder="R$ 0,00"
-               style="width:100%; padding:0.875rem; border-radius:10px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.3); color:white; font-size:1.1rem; text-align:center; margin-bottom:1.25rem;"
+               style="width:100%; padding:0.875rem; border-radius:10px; border:1px solid var(--glass-border); background: var(--input-bg-strong); color: var(--text-main); font-size:1.1rem; text-align:center; margin-bottom:1.25rem;"
                onkeydown="if(event.key==='Enter') confirmOpenCash()">
         <div style="display:flex; gap:0.75rem;">
             <button onclick="closeOpenCashModal()" class="btn btn-secondary" style="flex:1; justify-content:center;">Cancelar</button>
@@ -89,9 +89,9 @@
         <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
             <div style="position: relative; flex: 1;">
                 <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                <input type="text" id="search-product" placeholder="Buscar produto por nome ou código..." style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white;">
+                <input type="text" id="search-product" placeholder="Buscar produto por nome ou código..." style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main);">
             </div>
-            <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; cursor: pointer;">
+            <select id="filter-category" style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main); cursor: pointer;">
                 <option value="">Todas Categorias</option>
             </select>
         </div>
@@ -113,7 +113,7 @@
             <h3 style="margin:0; display:flex; align-items:center; gap:0.5rem; font-size:1rem;">
                 <i class="ph ph-shopping-bag" style="color:var(--primary);"></i> Carrinho
             </h3>
-            <span id="cart-count" style="background:var(--primary); color:white; border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">0 itens</span>
+            <span id="cart-count" style="background:var(--primary); color: var(--text-main); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:700;">0 itens</span>
         </div>
 
         <!-- Itens do carrinho -->
@@ -130,8 +130,12 @@
         <!-- Cliente -->
         <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">CLIENTE (opcional)</label>
-            <input id="customer-name" type="text" placeholder="Nome do cliente" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem; margin-bottom:0.4rem;">
-            <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;" oninput="onPhoneInput(this.value)">
+            <input id="customer-name" type="text" placeholder="Nome do cliente" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.85rem; margin-bottom:0.4rem;">
+            <input id="customer-phone" type="tel" placeholder="WhatsApp (ex: 92999999999)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.85rem; margin-bottom:0.4rem;" oninput="onPhoneInput(this.value)">
+            <select id="customer-type" onchange="onCustomerTypeChange()" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color: var(--text-main); font-size:0.85rem; cursor:pointer;">
+                <option value="varejo">🛍️ Varejo</option>
+                <option value="atacado">📦 Atacado</option>
+            </select>
             <div id="customer-loyalty-badge" style="display:none; margin-top:0.4rem; padding:0.35rem 0.6rem; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); border-radius:6px; font-size:0.75rem; color:var(--primary-light);">
                 <i class="ph ph-star"></i> <span id="customer-loyalty-text"></span>
             </div>
@@ -140,7 +144,7 @@
         <!-- Logística -->
         <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">LOGÍSTICA</label>
-            <select id="delivery-type" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color:white; cursor:pointer; font-size:0.85rem;" onchange="toggleAddressField(this.value)">
+            <select id="delivery-type" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:var(--bg); color: var(--text-main); cursor:pointer; font-size:0.85rem;" onchange="toggleAddressField(this.value)">
                 <option value="pickup">🏪 Retirada</option>
                 <option value="delivery">🛵 Entrega</option>
             </select>
@@ -160,19 +164,19 @@
         <!-- Endereço de entrega -->
         <div id="address-container" style="display:none; margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">ENDEREÇO</label>
-            <textarea id="delivery-address" placeholder="Rua, número, bairro..." style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; height:52px; font-size:0.82rem; resize:none; margin-bottom:0.4rem;"></textarea>
-            <input id="delivery-reference" placeholder="Referência (ex: próximo ao mercado)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; margin-bottom:0.4rem;">
-            <input id="delivery-location-link" placeholder="Link Google Maps (opcional)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; margin-bottom:0.4rem;">
+            <textarea id="delivery-address" placeholder="Rua, número, bairro..." style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); height:52px; font-size:0.82rem; resize:none; margin-bottom:0.4rem;"></textarea>
+            <input id="delivery-reference" placeholder="Referência (ex: próximo ao mercado)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.82rem; margin-bottom:0.4rem;">
+            <input id="delivery-location-link" placeholder="Link Google Maps (opcional)" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.82rem; margin-bottom:0.4rem;">
             <div style="display:flex; align-items:center; gap:0.5rem;">
                 <label style="font-size:0.78rem; color:var(--text-muted); white-space:nowrap;">Taxa de entrega R$</label>
-                <input id="delivery-fee" type="number" value="0" min="0" step="0.5" style="flex:1; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.85rem;" onchange="updateCartTotals()">
+                <input id="delivery-fee" type="number" value="0" min="0" step="0.5" style="flex:1; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.85rem;" onchange="updateCartTotals()">
             </div>
         </div>
 
         <!-- VENDEDOR (FASE 2) -->
         <div style="padding:0.75rem; border-radius:10px; background:rgba(99,102,241,0.05); margin-bottom:0.75rem; border:1px solid rgba(99,102,241,0.15);">
             <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.3rem; font-weight:700;">VENDEDOR</label>
-            <select id="sale-seller" style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem;">
+            <select id="sale-seller" style="width:100%; padding:0.5rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.82rem;">
                 <option value="">Nenhum / Loja</option>
             </select>
         </div>
@@ -181,7 +185,7 @@
         <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">CUPOM</label>
             <div style="display:flex; gap:6px;">
-                <input id="coupon-input" type="text" placeholder="Código do cupom" style="flex:1; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem; text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <input id="coupon-input" type="text" placeholder="Código do cupom" style="flex:1; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.82rem; text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
                 <button onclick="applyCoupon()" class="btn-tiny" style="padding:0.5rem 0.75rem; white-space:nowrap;">Aplicar</button>
             </div>
             <div id="coupon-feedback" style="display:none; margin-top:0.35rem; font-size:0.75rem; padding:0.3rem 0.6rem; border-radius:6px;"></div>
@@ -190,7 +194,7 @@
         <!-- Observação -->
         <div style="margin-bottom:0.75rem;">
             <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; letter-spacing:0.05em; display:block; margin-bottom:0.4rem;">OBSERVAÇÃO</label>
-            <input id="sale-notes" type="text" placeholder="Ex: embrulho presente, ligar antes de entregar..." style="width:100%; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.82rem;">
+            <input id="sale-notes" type="text" placeholder="Ex: embrulho presente, ligar antes de entregar..." style="width:100%; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.82rem;">
         </div>
 
         <!-- Totais -->
@@ -259,7 +263,7 @@
     }
     .btn-tiny:hover {
         background: var(--primary);
-        color: white;
+        color: var(--text-main);
         border-color: var(--primary);
     }
     /* Estilo para impressão do cupom */
@@ -344,6 +348,31 @@
     let companyName = 'FASHION ERP';
     let appliedCoupon = null;
     let lookupDebounce = null;
+    let customerType = 'varejo';
+
+    function getEffectivePrice(product, variation) {
+        const wholesale = (variation && variation.wholesale) ? variation.wholesale : (product ? product.wholesale_price : 0);
+        const retail = (variation && variation.price) ? variation.price : (product ? product.price : 0);
+        if (customerType === 'atacado' && wholesale && wholesale > 0) return wholesale;
+        return retail;
+    }
+
+    function onCustomerTypeChange() {
+        customerType = document.getElementById('customer-type').value;
+        recalcCartPrices();
+        renderProducts(products);
+    }
+
+    function recalcCartPrices() {
+        cart.forEach(item => {
+            const product = products.find(p => p.id === item.product_id);
+            if (!product) return;
+            const variation = item.variation_id ? (product.variations || []).find(v => v.id === item.variation_id) : null;
+            item.price = getEffectivePrice(product, variation);
+        });
+        saveCart();
+        renderCart();
+    }
 
     fetch('/api/config').then(r => r.json()).then(d => { if (d.name) companyName = d.name.toUpperCase(); });
 
@@ -410,18 +439,20 @@
 
             const imgHtml = p.image
                 ? `<img src="${p.image}" alt="" style="width:100%;height:110px;object-fit:cover;">`
-                : `<div style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;"><i class="ph ph-shirt" style="font-size:2rem;opacity:0.2;"></i></div>`;
+                : `<div style="width:100%;height:110px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;"><i class="ph ph-sneaker" style="font-size:2rem;opacity:0.2;"></i></div>`;
 
             const stockBadge = !hasStock
-                ? `<span style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">ESGOTADO</span>`
-                : (totalStock <= 3 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(245,158,11,0.9);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Ult. ${totalStock}</span>` : `<span style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.1);backdrop-filter:blur(4px);color:white;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Est: ${totalStock}</span>`);
+                ? `<span style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,0.9);color: var(--text-main);font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">ESGOTADO</span>`
+                : (totalStock <= 3 ? `<span style="position:absolute;top:6px;right:6px;background:rgba(245,158,11,0.9);color: var(--text-main);font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Ult. ${totalStock}</span>` : `<span style="position:absolute;top:6px;right:6px;background:rgba(255,255,255,0.1);backdrop-filter:blur(4px);color: var(--text-main);font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:20px;">Est: ${totalStock}</span>`);
 
+            const effPrice = getEffectivePrice(p, null);
+            const isWholesalePrice = customerType === 'atacado' && p.wholesale_price > 0;
             card.innerHTML = `
                 ${imgHtml}
                 ${stockBadge}
                 <div style="padding:0.6rem 0.75rem;">
                     <div style="font-weight:600;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;">${p.name}</div>
-                    <div style="color:var(--accent);font-weight:800;font-size:0.9rem;">R$ ${p.price.toFixed(2)}</div>
+                    <div style="color:var(--accent);font-weight:800;font-size:0.9rem;">R$ ${effPrice.toFixed(2)} ${isWholesalePrice ? '<span style="font-size:0.6rem;font-weight:800;color:#6366f1;">ATACADO</span>' : ''}</div>
                 </div>`;
             grid.appendChild(card);
         });
@@ -462,7 +493,7 @@
     function addToCartDirect(p) {
         const existing = cart.find(item => item.product_id === p.id && !item.variation_id);
         if (existing) { existing.quantity++; }
-        else { cart.push({ product_id: p.id, variation_id: null, name: p.name, size: '', color: '', price: p.price, quantity: 1 }); }
+        else { cart.push({ product_id: p.id, variation_id: null, name: p.name, size: '', color: '', price: getEffectivePrice(p, null), quantity: 1 }); }
         saveCart();
         renderCart();
     }
@@ -475,7 +506,7 @@
     function addToCart(p, v) {
         const existing = cart.find(item => item.variation_id === v.id);
         if (existing) { existing.quantity++; }
-        else { cart.push({ product_id: p.id, variation_id: v.id, name: p.name, size: v.size, color: v.color || '', price: v.price || p.price, quantity: 1 }); }
+        else { cart.push({ product_id: p.id, variation_id: v.id, name: p.name, size: v.size, color: v.color || '', price: getEffectivePrice(p, v), quantity: 1 }); }
         saveCart();
         renderCart();
         closeModal();
@@ -501,9 +532,9 @@
                         <div style="font-size:0.75rem;color:var(--accent);font-weight:700;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.35rem;">
-                        <button onclick="changeQty(${index},-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">−</button>
+                        <button onclick="changeQty(${index},-1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background: var(--input-bg-strong);color: var(--text-main);cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">−</button>
                         <span style="font-size:0.85rem;font-weight:700;min-width:20px;text-align:center;">${item.quantity}</span>
-                        <button onclick="changeQty(${index},1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background:rgba(0,0,0,0.3);color:white;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">+</button>
+                        <button onclick="changeQty(${index},1)" style="width:22px;height:22px;border-radius:50%;border:1px solid var(--glass-border);background: var(--input-bg-strong);color: var(--text-main);cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;">+</button>
                         <button onclick="removeFromCart(${index})" style="width:22px;height:22px;border-radius:50%;border:none;background:rgba(239,68,68,0.15);color:#ef4444;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;margin-left:2px;"><i class="ph ph-trash"></i></button>
                     </div>`;
                 container.appendChild(div);
@@ -621,13 +652,13 @@
             const div = document.createElement('div');
             div.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr 32px; gap:6px; align-items:center;';
             div.innerHTML = `
-                <select onchange="updatePaymentMethod(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background:var(--bg); color:white; font-size:0.8rem;">
+                <select onchange="updatePaymentMethod(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background:var(--bg); color: var(--text-main); font-size:0.8rem;">
                     <option value="Dinheiro" ${p.method==='Dinheiro'?'selected':''}>💵 Dinheiro</option>
                     <option value="PIX" ${p.method==='PIX'?'selected':''}>💠 PIX</option>
                     <option value="Cartão" ${p.method==='Cartão'?'selected':''}>💳 Cartão</option>
                     <option value="Crediário" ${p.method==='Crediário'?'selected':''}>📋 Crediário</option>
                 </select>
-                <input type="number" value="${p.amount}" step="0.01" onchange="updatePaymentAmount(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem; text-align:right;">
+                <input type="number" value="${p.amount}" step="0.01" onchange="updatePaymentAmount(${index}, this.value)" style="padding:0.5rem; border-radius:6px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem; text-align:right;">
                 <button onclick="removePaymentEntry(${index})" style="background:none; border:none; color:var(--secondary); cursor:pointer;"><i class="ph ph-trash"></i></button>
             `;
             container.appendChild(div);
@@ -674,6 +705,11 @@
                     document.getElementById('customer-loyalty-text').textContent =
                         `${data.name} · ${data.loyalty_points} ponto${data.loyalty_points !== 1 ? 's' : ''}`;
                     badge.style.display = 'block';
+                    const typeSel = document.getElementById('customer-type');
+                    if (data.customer_type && typeSel.value !== data.customer_type) {
+                        typeSel.value = data.customer_type;
+                        onCustomerTypeChange();
+                    }
                 }
             } catch(e) {}
         }, 600);
@@ -754,6 +790,7 @@
             delivery_location_link: isDelivery ? document.getElementById('delivery-location-link').value : '',
             customer_name: document.getElementById('customer-name').value.trim() || null,
             customer_phone: document.getElementById('customer-phone').value.trim() || null,
+            customer_type: customerType,
             notes: document.getElementById('sale-notes').value.trim() || null,
             coupon_code: appliedCoupon ? appliedCoupon.code : null,
         };
@@ -916,6 +953,8 @@
             
             document.getElementById('customer-name').value = '';
             document.getElementById('customer-phone').value = '';
+            document.getElementById('customer-type').value = 'varejo';
+            customerType = 'varejo';
             document.getElementById('delivery-address').value = '';
             document.getElementById('delivery-reference').value = '';
             document.getElementById('delivery-location-link').value = '';

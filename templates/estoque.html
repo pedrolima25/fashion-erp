@@ -12,13 +12,13 @@
         <div style="display: flex; flex-direction: column; gap: 1rem;">
             <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Produto (Variação)</label>
-                <select id="adj-variation" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <select id="adj-variation" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     <option value="">Carregando produtos...</option>
                 </select>
             </div>
             <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Tipo de Movimentação</label>
-                <select id="adj-type" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <select id="adj-type" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     <option value="entry">Entrada (Compra/Reposição)</option>
                     <option value="adjustment">Ajuste (Correção de Inventário)</option>
                     <option value="exit">Saída (Avaria/Perda)</option>
@@ -26,11 +26,11 @@
             </div>
             <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Quantidade</label>
-                <input type="number" id="adj-qty" value="1" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <input type="number" id="adj-qty" value="1" min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
             </div>
             <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Observação</label>
-                <input type="text" id="adj-obs" placeholder="Motivo do ajuste..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <input type="text" id="adj-obs" placeholder="Motivo do ajuste..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
             </div>
             <button class="btn btn-primary" onclick="submitAdjustment()" style="width: 100%; margin-top: 1rem; justify-content: center;">
                 <i class="fas fa-sync"></i> Atualizar Estoque

@@ -19,7 +19,7 @@
         
         <div id="loading-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10;">
             <div class="ph ph-spinner ph-spin" style="font-size:3rem; color:var(--primary); margin-bottom:1rem;"></div>
-            <p style="color:white; font-weight:600;">Iniciando Visão Computacional...</p>
+            <p style="color: var(--text-main); font-weight:600;">Iniciando Visão Computacional...</p>
         </div>
     </div>
 
@@ -58,11 +58,11 @@
     }
     .btn-tiny:hover {
         background: rgba(255,255,255,0.1);
-        color: white;
+        color: var(--text-main);
     }
     .btn-tiny.active {
         background: var(--primary);
-        color: white;
+        color: var(--text-main);
         border-color: var(--primary);
         box-shadow: 0 4px 12px rgba(99,102,241,0.3);
     }
@@ -218,7 +218,7 @@ function initCamera() {
     camera.start().catch(err => {
         console.error("Erro ao iniciar câmera:", err);
         loadingOverlay.innerHTML = `<div class="ph ph-warning" style="font-size:3rem; color:#ef4444; margin-bottom:1rem;"></div>
-                                   <p style="color:white; font-weight:600;">Erro na Câmera</p>
+                                   <p style="color: var(--text-main); font-weight:600;">Erro na Câmera</p>
                                    <p style="color:rgba(255,255,255,0.6); font-size:0.8rem; padding:0 2rem; text-align:center;">Verifique as permissões de vídeo do seu navegador.</p>`;
     });
 }

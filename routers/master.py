@@ -20,7 +20,7 @@ def _require_master(request: Request):
 
 class CompanyCreateMaster(BaseModel):
     name: str
-    category: Optional[str] = "Loja de Roupas"
+    category: Optional[str] = "Loja de Calçados"
     admin_username: str
     admin_password: str
 

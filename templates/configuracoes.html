@@ -5,6 +5,15 @@
 {% block header_title %}Configurações do Sistema{% endblock %}
 
 {% block content %}
+<style>
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .slider { position: absolute; cursor: pointer; inset: 0; background: var(--input-bg); border: 1px solid var(--glass-border); transition: 0.25s; }
+    .switch .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: var(--text-muted); border-radius: 50%; transition: 0.25s; }
+    .switch .slider.round { border-radius: 24px; }
+    .switch input:checked + .slider { background: var(--primary); border-color: var(--primary); }
+    .switch input:checked + .slider:before { transform: translateX(18px); background: white; }
+</style>
 <div class="dashboard-grid" style="grid-template-columns: 1.5fr 1fr;">
     <!-- Coluna 1: Dados e Logística -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -15,30 +24,43 @@
             </h3>
             
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div>
-                    <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Unidade</label>
-                    <input type="text" id="conf-name" value="Fashion Store Premium" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                <div style="display: flex; gap: 1rem; align-items: start;">
+                    <div id="logo-preview" onclick="document.getElementById('logo-input').click()" style="width: 76px; height: 76px; flex-shrink: 0; border: 2px dashed var(--glass-border); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background: var(--input-bg); transition: border-color 0.2s;">
+                        <div id="logo-placeholder" style="display: flex; flex-direction: column; align-items: center;">
+                            <i class="fas fa-camera" style="opacity: 0.4; font-size: 1.1rem;"></i>
+                            <span style="font-size: 0.55rem; color: var(--text-muted); margin-top: 0.25rem;">Logo</span>
+                        </div>
+                        <img id="logo-img" src="" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="logo-input" accept="image/*" style="display: none;" onchange="handleLogoUpload(this)">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Nome da Unidade</label>
+                        <input type="text" id="conf-name" value="Sapataria Premium" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main); margin-bottom: 0.75rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Categoria (aparece no catálogo)</label>
+                        <input type="text" id="conf-category" placeholder="Ex: Loja de Calçados" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
+                        <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem;">Clique no quadrado ao lado para trocar a logo. Ela aparece no menu, no catálogo online e nos recibos.</p>
+                    </div>
                 </div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Celular / WhatsApp</label>
-                        <input type="text" id="conf-phone" placeholder="(00) 00000-0000" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <input type="text" id="conf-phone" placeholder="(00) 00000-0000" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Chave PIX (CNPJ/E-mail/Tel)</label>
-                        <input type="text" id="conf-pix" placeholder="Sua chave PIX" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <input type="text" id="conf-pix" placeholder="Sua chave PIX" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Endereço Completo</label>
-                        <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <input type="text" id="conf-address" placeholder="Rua, Número, Bairro, Cidade - UF" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Link do Google Maps (GPS)</label>
-                        <input type="text" id="conf-location-link" placeholder="https://maps.app.goo.gl/..." style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <input type="text" id="conf-location-link" placeholder="https://maps.app.goo.gl/..." style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     </div>
                 </div>
 
@@ -56,7 +78,7 @@
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                 <div>
                     <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Tipo de Cobrança de Entrega</label>
-                    <select id="conf-delivery-mode" onchange="toggleLogisticsView(this.value)" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    <select id="conf-delivery-mode" onchange="toggleLogisticsView(this.value)" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                         <option value="fixed">Taxa Única (Fixa)</option>
                         <option value="neighborhood">Por Bairro (Variável)</option>
                     </select>
@@ -65,7 +87,7 @@
             <div id="view-fixed-fee">
                 <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Taxa de Entrega Padrão (R$)</label>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <input type="number" id="conf-delivery-fee" step="0.01" value="0.00" style="flex: 1; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                    <input type="number" id="conf-delivery-fee" step="0.01" value="0.00" style="flex: 1; padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                     <span style="color: var(--text-muted); font-size: 0.8rem;">Taxa fixa cobrada no Zap</span>
                 </div>
             </div>
@@ -74,8 +96,8 @@
                 <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Gerenciar Bairros e Taxas</label>
                 
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <input type="text" id="new-nb-name" placeholder="Nome do Bairro" style="flex: 2; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
-                    <input type="number" id="new-nb-fee" placeholder="R$" style="flex: 1; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.85rem;">
+                    <input type="text" id="new-nb-name" placeholder="Nome do Bairro" style="flex: 2; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size: 0.85rem;">
+                    <input type="number" id="new-nb-fee" placeholder="R$" style="flex: 1; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size: 0.85rem;">
                     <button class="btn btn-primary" onclick="addNeighborhood()" style="padding: 0.6rem 1rem;"><i class="fas fa-plus"></i></button>
                 </div>
 
@@ -121,7 +143,7 @@
                     </div>
                     
                     <div id="wpp-instructions" style="margin-bottom: 1.5rem;">
-                        <p id="wpp-desc" style="font-size: 0.95rem; color: white; font-weight: 600; margin-bottom: 0.5rem;">Como conectar:</p>
+                        <p id="wpp-desc" style="font-size: 0.95rem; color: var(--text-main); font-weight: 600; margin-bottom: 0.5rem;">Como conectar:</p>
                         <ul style="text-align: left; font-size: 0.85rem; color: var(--text-muted); display: inline-block; list-style: none; padding: 0;">
                             <li>1. Abra o WhatsApp no seu celular</li>
                             <li>2. Toque em <b>Mais Opções</b> ou <b>Configurações</b></li>
@@ -162,7 +184,7 @@
             <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Slug do Catálogo</label>
                 <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" id="conf-slug" placeholder="minha-loja" style="flex:1; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white; font-size: 0.85rem;">
+                    <input type="text" id="conf-slug" placeholder="minha-loja" style="flex:1; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main); font-size: 0.85rem;">
                     <button onclick="saveSlug()" class="btn btn-primary" style="padding: 0.7rem 1rem;"><i class="fas fa-save"></i></button>
                 </div>
             </div>
@@ -173,6 +195,27 @@
             <p style="font-size: 0.75rem; color: var(--text-muted);">
                 Compartilhe o link no WhatsApp/Instagram. Clientes podem ver produtos e comprar.
             </p>
+
+            <div style="border-top: 1px solid var(--glass-border); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600;">🛍️ Mostrar preço de Varejo</span>
+                    <label class="switch">
+                        <input type="checkbox" id="conf-show-retail" checked onchange="savePriceVisibility()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600;">📦 Mostrar preço de Atacado</span>
+                    <label class="switch">
+                        <input type="checkbox" id="conf-show-wholesale" checked onchange="savePriceVisibility()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <p style="font-size: 0.72rem; color: var(--text-muted);">
+                    Quando desligado, o produto aparece como "Consulte o preço" pra esse tipo de cliente no catálogo — o cliente ainda consegue montar o pedido normalmente.
+                </p>
+                <span id="price-vis-saved" style="display:none; font-size: 0.72rem; color: #10b981; font-weight: 700;"><i class="fas fa-check"></i> Salvo</span>
+            </div>
         </div>
     </div>
 
@@ -182,12 +225,12 @@
             <i class="fas fa-ticket-alt" style="color: #f59e0b;"></i> Cupons de Desconto
         </h3>
         <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-            <input type="text" id="cup-code" placeholder="VERAO10" style="flex:1; min-width:80px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.8rem; text-transform: uppercase;">
-            <select id="cup-type" style="padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--bg); color: white; font-size: 0.8rem;">
+            <input type="text" id="cup-code" placeholder="VERAO10" style="flex:1; min-width:80px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size: 0.8rem; text-transform: uppercase;">
+            <select id="cup-type" style="padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main); font-size: 0.8rem;">
                 <option value="percent">%</option>
                 <option value="fixed">R$</option>
             </select>
-            <input type="number" id="cup-value" placeholder="10" style="width:60px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; font-size: 0.8rem;">
+            <input type="number" id="cup-value" placeholder="10" style="width:60px; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size: 0.8rem;">
             <button onclick="createCoupon()" class="btn btn-primary" style="padding: 0.6rem 0.8rem;"><i class="fas fa-plus"></i></button>
         </div>
         <div id="coupons-list" style="max-height: 200px; overflow-y: auto; display: grid; gap: 0.4rem;"></div>
@@ -214,17 +257,17 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
             <div>
                 <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">PONTOS POR R$ 1,00</label>
-                <input type="number" id="loy-rate" value="1" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-weight:700;">
+                <input type="number" id="loy-rate" value="1" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-weight:700;">
             </div>
             <div>
                 <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">MÍNIMO PARA RESGATE (PTS)</label>
-                <input type="number" id="loy-threshold" value="100" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-weight:700;">
+                <input type="number" id="loy-threshold" value="100" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-weight:700;">
             </div>
         </div>
 
         <div style="margin-bottom:1.5rem;">
             <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">VALOR DO RESGATE (R$)</label>
-            <input type="number" id="loy-value" value="10" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:#10b981; font-weight:700;">
+            <input type="number" id="loy-value" value="10" style="width:100%; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color:#10b981; font-weight:700;">
         </div>
 
         <button onclick="saveLoyalty()" class="btn btn-primary" style="width:100%; justify-content:center; background:var(--accent);">
@@ -244,8 +287,8 @@
             </div>
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
-            <input type="text" id="sel-name" placeholder="Nome" style="flex:2; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
-            <input type="number" id="sel-rate" placeholder="%" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+            <input type="text" id="sel-name" placeholder="Nome" style="flex:2; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
+            <input type="number" id="sel-rate" placeholder="%" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
             <button onclick="createSeller()" class="btn btn-primary" style="padding:0.6rem 0.8rem;"><i class="fas fa-plus"></i></button>
         </div>
         <div id="sellers-list" style="display:grid; gap:0.5rem;"></div>
@@ -263,7 +306,7 @@
             </div>
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
-            <input type="text" id="sup-name" placeholder="Nome" style="flex:2; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+            <input type="text" id="sup-name" placeholder="Nome" style="flex:2; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
             <button onclick="createSupplier()" class="btn btn-primary" style="padding:0.6rem 0.8rem; background:#f59e0b;"><i class="fas fa-plus"></i></button>
         </div>
         <div id="suppliers-list" style="display:grid; gap:0.5rem;"></div>
@@ -281,7 +324,7 @@
             </div>
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-            <input type="number" id="conf-goal-value" placeholder="Ex: 50000" style="flex:1; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-weight:700;">
+            <input type="number" id="conf-goal-value" placeholder="Ex: 50000" style="flex:1; padding:0.7rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-weight:700;">
             <button onclick="saveMonthlyGoal()" class="btn btn-primary" style="padding:0.7rem 1.25rem;"><i class="fas fa-save"></i> Salvar</button>
         </div>
         <p style="font-size:0.65rem; color:var(--text-muted);">Esta meta será usada para calcular o progresso no Dashboard.</p>
@@ -299,11 +342,11 @@
             </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
-            <input type="text" id="user-new-name" placeholder="Usuário" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
-            <input type="password" id="user-new-pass" placeholder="Senha" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+            <input type="text" id="user-new-name" placeholder="Usuário" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
+            <input type="password" id="user-new-pass" placeholder="Senha" style="padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
         </div>
         <div style="display:flex; gap:0.5rem; margin-bottom:1.25rem;">
-            <select id="user-new-role" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.2); color:white; font-size:0.8rem;">
+            <select id="user-new-role" style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.8rem;">
                 <option value="admin">Administrador (Tudo)</option>
                 <option value="seller">Vendedor (Limitado)</option>
             </select>
@@ -321,11 +364,20 @@
             if (data.error) return;
             
             document.getElementById('conf-name').value = data.name || '';
+            document.getElementById('conf-category').value = data.category || '';
+            if (data.logo_base64) {
+                currentLogoBase64 = data.logo_base64;
+                document.getElementById('logo-img').src = data.logo_base64;
+                document.getElementById('logo-img').style.display = 'block';
+                document.getElementById('logo-placeholder').style.display = 'none';
+            }
             document.getElementById('conf-phone').value = data.whatsapp_number || '';
             document.getElementById('conf-pix').value = data.pix_key || '';
             document.getElementById('conf-address').value = data.address || '';
             document.getElementById('conf-location-link').value = data.location_link || '';
             document.getElementById('conf-delivery-fee').value = data.delivery_fee || 0;
+            document.getElementById('conf-show-retail').checked = data.show_retail_price !== false;
+            document.getElementById('conf-show-wholesale').checked = data.show_wholesale_price !== false;
             const mode = data.delivery_mode || 'fixed';
             document.getElementById('conf-delivery-mode').value = mode;
             toggleLogisticsView(mode);
@@ -333,6 +385,21 @@
         } catch (e) {
             console.error('Erro ao carregar configurações:', e);
         }
+    }
+
+    let currentLogoBase64 = null;
+
+    function handleLogoUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentLogoBase64 = e.target.result;
+            document.getElementById('logo-img').src = currentLogoBase64;
+            document.getElementById('logo-img').style.display = 'block';
+            document.getElementById('logo-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
     }
 
     function toggleLogisticsView(mode) {
@@ -382,22 +449,55 @@
 
     async function saveSettings() {
         const name = document.getElementById('conf-name').value;
+        const category = document.getElementById('conf-category').value;
         const whatsapp_number = document.getElementById('conf-phone').value;
         const pix_key = document.getElementById('conf-pix').value;
         const address = document.getElementById('conf-address').value;
         const location_link = document.getElementById('conf-location-link').value;
         const delivery_fee = parseFloat(document.getElementById('conf-delivery-fee').value) || 0;
         const delivery_mode = document.getElementById('conf-delivery-mode').value;
+        const show_retail_price = document.getElementById('conf-show-retail').checked;
+        const show_wholesale_price = document.getElementById('conf-show-wholesale').checked;
 
         try {
             const res = await fetch('/api/config/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, whatsapp_number, pix_key, address, location_link, delivery_fee, delivery_mode })
+                body: JSON.stringify({ name, category, whatsapp_number, pix_key, address, location_link, delivery_fee, delivery_mode, logo_base64: currentLogoBase64, show_retail_price, show_wholesale_price })
             });
 
             if (res.ok) {
                 showToast('Configurações salvas com sucesso!');
+            } else {
+                alert('Erro ao salvar.');
+            }
+        } catch (e) {
+            alert('Erro de conexão.');
+        }
+    }
+
+    async function savePriceVisibility() {
+        const name = document.getElementById('conf-name').value;
+        const category = document.getElementById('conf-category').value;
+        const whatsapp_number = document.getElementById('conf-phone').value;
+        const pix_key = document.getElementById('conf-pix').value;
+        const address = document.getElementById('conf-address').value;
+        const location_link = document.getElementById('conf-location-link').value;
+        const delivery_fee = parseFloat(document.getElementById('conf-delivery-fee').value) || 0;
+        const delivery_mode = document.getElementById('conf-delivery-mode').value;
+        const show_retail_price = document.getElementById('conf-show-retail').checked;
+        const show_wholesale_price = document.getElementById('conf-show-wholesale').checked;
+
+        try {
+            const res = await fetch('/api/config/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, category, whatsapp_number, pix_key, address, location_link, delivery_fee, delivery_mode, logo_base64: currentLogoBase64, show_retail_price, show_wholesale_price })
+            });
+            if (res.ok) {
+                const el = document.getElementById('price-vis-saved');
+                el.style.display = 'inline';
+                setTimeout(() => { el.style.display = 'none'; }, 2000);
             } else {
                 alert('Erro ao salvar.');
             }

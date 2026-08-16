@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Fashion ERP Pro{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <script>(function(){try{var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <link rel="stylesheet" href="/static/style.css?v=3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/static/theme.js" defer></script>
     <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -58,7 +60,7 @@
             font-size: 1.25rem;
         }
         .main-layout header {
-            background: rgba(15, 23, 42, 0.4);
+            background: var(--panel-bg);
             backdrop-filter: blur(8px);
             padding: 1rem 2rem;
             margin: -2rem -2rem 2rem -2rem;
@@ -82,7 +84,7 @@
         <div style="padding: 0.5rem 1rem 2rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; padding: 0.5rem;">
                 <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);">
-                    <i class="ph-bold ph-sketch-logo" style="color: white; font-size: 1.4rem;"></i>
+                    <i class="ph-bold ph-sketch-logo" style="color: var(--text-main); font-size: 1.4rem;"></i>
                 </div>
                 <div>
                     <h2 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1;">Fashion<span style="color: var(--primary);">PRO</span></h2>
@@ -99,7 +101,7 @@
                 </a>
                 <a href="/provador" class="nav-item {% if active_page == 'provador' %}active{% endif %}">
                     <i class="ph ph-unite"></i> Provador AR
-                    <span style="background:var(--primary); font-size:0.5rem; padding:2px 5px; border-radius:4px; margin-left:5px; color:white; font-weight:800;">NOVO</span>
+                    <span style="background:var(--primary); font-size:0.5rem; padding:2px 5px; border-radius:4px; margin-left:5px; color: var(--text-main); font-weight:800;">NOVO</span>
                 </a>
                 <a href="/entregas" class="nav-item {% if active_page == 'deliveries' %}active{% endif %}">
                     <i class="ph ph-truck"></i> Entregas
@@ -154,11 +156,11 @@
     <main class="main-layout">
         <header style="background: rgba(11, 15, 26, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); padding: 1rem 2.5rem; margin: -2rem -2.5rem 2rem -2.5rem; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 1.5rem;">
-                <button onclick="toggleSidebar()" class="mobile-only" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 0.6rem; border-radius: 10px; line-height: 0;">
+                <button onclick="toggleSidebar()" class="mobile-only" style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 0.6rem; border-radius: 10px; line-height: 0;">
                     <i class="ph-bold ph-list" style="font-size: 1.4rem;"></i>
                 </button>
                 <div>
-                    <h1 style="font-size: 1.4rem; font-weight: 800; color: white; letter-spacing: -0.5px;">{% block header_title %}Dashboard{% endblock %}</h1>
+                    <h1 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px;">{% block header_title %}Dashboard{% endblock %}</h1>
                     <div style="display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
                         <i class="ph ph-house-line"></i> <span>Home</span> <i class="ph ph-caret-right" style="font-size: 0.6rem; opacity: 0.5;"></i> <span style="color: var(--primary-light);">{% block breadcrumb %}Fashion ERP{% endblock %}</span>
                     </div>
@@ -177,12 +179,14 @@
                     </div>
                 </div>
 
+                <button id="theme-toggle-btn" class="theme-toggle" onclick="toggleTheme()" title="Mudar tema"><i class="ph-bold ph-sun"></i></button>
+
                 <div style="width: 1px; height: 32px; background: var(--glass-border); margin: 0 0.5rem;"></div>
 
                 <!-- User Profile -->
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="text-align: right; display: none; display: md-block;" class="desktop-only">
-                        <p style="font-size: 0.85rem; font-weight: 800; color: white; line-height: 1.2; text-transform: capitalize;">{{ request.session.get('user', 'Admin') }}</p>
+                        <p style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); line-height: 1.2; text-transform: capitalize;">{{ request.session.get('user', 'Admin') }}</p>
                         <p style="font-size: 0.65rem; color: #10b981; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Online Agora</p>
                     </div>
                     <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(244,63,94,0.1)); border: 1px solid var(--glass-highlight); padding: 2px;">

@@ -22,12 +22,15 @@ class VariationSchema(BaseModel):
     stock: int = 0
     price: Optional[float] = None
     cost: Optional[float] = None
+    wholesale: Optional[float] = None
 
 
 class ProductCreate(BaseModel):
     name: str
+    brand: Optional[str] = None
     base_price: float
     cost_price: float = 0.0
+    wholesale_price: float = 0.0
     description: Optional[str] = None
     category_id: Optional[int] = None
     image_base64: Optional[str] = None
@@ -87,15 +90,18 @@ def get_products(
                 "stock": v.stock_quantity,
                 "price": v.price_override or p.base_price,
                 "cost": v.cost_price_override or p.cost_price,
+                "wholesale": v.wholesale_price_override or p.wholesale_price or 0.0,
             }
             for v in p.variations
         ]
         res.append({
             "id": p.id,
             "name": p.name,
+            "brand": p.brand or "",
             "category": p.category.name if p.category else "Sem Categoria",
             "price": p.base_price,
             "cost": p.cost_price,
+            "wholesale_price": p.wholesale_price or 0.0,
             "show_on_whatsapp": p.show_on_whatsapp,
             "image": p.image_base64 if include_images else None,
             "variations": vars_list,
@@ -119,8 +125,10 @@ def create_product(data: ProductCreate, request: Request, db: Session = Depends(
     new_p = Product(
         company_id=cid,
         name=data.name,
+        brand=data.brand,
         base_price=data.base_price,
         cost_price=data.cost_price,
+        wholesale_price=data.wholesale_price,
         description=data.description,
         category_id=data.category_id,
         image_base64=data.image_base64,
@@ -136,6 +144,7 @@ def create_product(data: ProductCreate, request: Request, db: Session = Depends(
             stock_quantity=v.stock,
             price_override=v.price,
             cost_price_override=v.cost,
+            wholesale_price_override=v.wholesale,
         ))
     db.commit()
     return {"success": True}
@@ -148,8 +157,10 @@ def update_product(product_id: int, data: ProductCreate, request: Request, db: S
     if not product:
         return JSONResponse(status_code=404, content={"error": "Produto não encontrado"})
     product.name = data.name
+    product.brand = data.brand
     product.base_price = data.base_price
     product.cost_price = data.cost_price
+    product.wholesale_price = data.wholesale_price
     product.description = data.description
     product.category_id = data.category_id
     product.show_on_whatsapp = data.show_on_whatsapp
@@ -164,6 +175,7 @@ def update_product(product_id: int, data: ProductCreate, request: Request, db: S
             stock_quantity=v.stock,
             price_override=v.price,
             cost_price_override=v.cost,
+            wholesale_price_override=v.wholesale,
         ))
     db.commit()
     return {"success": True}
@@ -204,8 +216,10 @@ async def import_products_csv(request: Request, file: UploadFile = File(...), db
     for i, row in enumerate(reader, start=2):
         try:
             name = (row.get("nome") or row.get("name") or "").strip()
+            brand = (row.get("marca") or row.get("brand") or "").strip()
             price = float((row.get("preco_venda") or row.get("preco") or row.get("price") or "0").replace(",", "."))
             cost = float((row.get("preco_custo") or row.get("custo") or row.get("cost") or "0").replace(",", "."))
+            wholesale = float((row.get("preco_atacado") or row.get("atacado") or row.get("wholesale") or "0").replace(",", "."))
             size = (row.get("tamanho") or row.get("size") or "U").strip()
             color = (row.get("cor") or row.get("color") or "").strip()
             stock = int(float((row.get("estoque") or row.get("stock") or "0").replace(",", ".")))
@@ -215,7 +229,7 @@ async def import_products_csv(request: Request, file: UploadFile = File(...), db
             if name not in products_cache:
                 p = db.query(Product).filter(Product.company_id == cid, Product.name == name).first()
                 if not p:
-                    p = Product(company_id=cid, name=name, base_price=price, cost_price=cost, active=True)
+                    p = Product(company_id=cid, name=name, brand=brand or None, base_price=price, cost_price=cost, wholesale_price=wholesale, active=True)
                     db.add(p)
                     db.flush()
                 products_cache[name] = p

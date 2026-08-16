@@ -39,6 +39,7 @@ class SaleCreate(BaseModel):
     delivery_location_link: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+    customer_type: Optional[str] = "varejo"
     seller_id: Optional[int] = None
     notes: Optional[str] = None
     coupon_code: Optional[str] = None
@@ -51,16 +52,18 @@ def finalize_sale(data: SaleCreate, request: Request, db: Session = Depends(get_
         if not cid:
             return JSONResponse(status_code=401, content={"error": "Sessão expirada"})
 
+        sale_customer_type = "atacado" if data.customer_type == "atacado" else "varejo"
+
         customer_id = None
         if data.customer_phone:
             customer = db.query(Customer).filter(Customer.phone == data.customer_phone, Customer.company_id == cid).first()
             if not customer:
-                customer = Customer(name=data.customer_name or "Cliente", phone=data.customer_phone, company_id=cid)
+                customer = Customer(name=data.customer_name or "Cliente", phone=data.customer_phone, company_id=cid, customer_type=sale_customer_type)
                 db.add(customer)
                 db.flush()
             customer_id = customer.id
         elif data.customer_name:
-            customer = Customer(name=data.customer_name, company_id=cid)
+            customer = Customer(name=data.customer_name, company_id=cid, customer_type=sale_customer_type)
             db.add(customer)
             db.flush()
             customer_id = customer.id
@@ -163,6 +166,7 @@ def customer_lookup_by_phone(request: Request, db: Session = Depends(get_db), ph
         "name": customer.name,
         "phone": customer.phone,
         "loyalty_points": customer.loyalty_points or 0,
+        "customer_type": customer.customer_type or "varejo",
     }
 
 

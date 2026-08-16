@@ -4,20 +4,52 @@
     --primary: #6366f1; /* Indigo 500 */
     --primary-light: #818cf8;
     --primary-dark: #4f46e5;
+    --primary-hover: #4f46e5;
     --secondary: #f43f5e; /* Rose 500 */
     --accent: #10b981; /* Emerald 500 */
     --bg: #0b0f1a; /* Deeper Dark */
+    --login-bg: #020617;
     --surface: rgba(15, 23, 42, 0.6);
     --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-highlight: rgba(255, 255, 255, 0.12);
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
+    --input-bg: rgba(0, 0, 0, 0.2);
+    --input-bg-strong: rgba(0, 0, 0, 0.3);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --panel-bg: rgba(15, 23, 42, 0.4);
+    --panel-bg-strong: rgba(15, 23, 42, 0.6);
+    --scrollbar-track: rgba(0, 0, 0, 0.1);
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 20px;
     --shadow-premium: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+    --primary: #6366f1;
+    --primary-light: #818cf8;
+    --primary-dark: #4f46e5;
+    --primary-hover: #4f46e5;
+    --secondary: #e11d48;
+    --accent: #059669;
+    --bg: #eef1f8;
+    --login-bg: #e2e8f0;
+    --surface: rgba(255, 255, 255, 0.8);
+    --glass-bg: rgba(15, 23, 42, 0.03);
+    --glass-border: rgba(15, 23, 42, 0.1);
+    --glass-highlight: rgba(15, 23, 42, 0.18);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --input-bg: rgba(15, 23, 42, 0.045);
+    --input-bg-strong: rgba(15, 23, 42, 0.07);
+    --hover-bg: rgba(15, 23, 42, 0.05);
+    --panel-bg: rgba(255, 255, 255, 0.55);
+    --panel-bg-strong: rgba(255, 255, 255, 0.7);
+    --scrollbar-track: rgba(15, 23, 42, 0.06);
+    --shadow-premium: 0 20px 40px -15px rgba(15, 23, 42, 0.18);
 }
 
 * {
@@ -89,7 +121,28 @@ body {
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--hover-bg);
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.theme-toggle:hover {
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* Sidebar */
@@ -188,7 +241,7 @@ header {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: rgba(15, 23, 42, 0.4);
+    background: var(--panel-bg);
 }
 
 /* PDV Mobile Tab Bar */
@@ -197,7 +250,7 @@ header {
     grid-column: 1 / -1;
     gap: 4px;
     margin-bottom: 0.5rem;
-    background: rgba(15,23,42,0.6);
+    background: var(--panel-bg-strong);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     padding: 4px;
@@ -387,7 +440,7 @@ td {
     height: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.1);
+    background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
     background: var(--glass-border);

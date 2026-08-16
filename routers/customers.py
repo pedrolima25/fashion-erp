@@ -19,6 +19,7 @@ class CustomerCreate(BaseModel):
     phone: str
     email: Optional[str] = None
     birthday: Optional[str] = None
+    customer_type: Optional[str] = "varejo"
 
 
 class CustomerUpdate(BaseModel):
@@ -26,6 +27,11 @@ class CustomerUpdate(BaseModel):
     phone: str
     email: Optional[str] = None
     birthday: Optional[str] = None
+    customer_type: Optional[str] = "varejo"
+
+
+def _clean_customer_type(value):
+    return "atacado" if value == "atacado" else "varejo"
 
 
 def _fmt_date(dt, fmt="%d/%m/%Y"):
@@ -92,6 +98,7 @@ def get_customers(request: Request, db: Session = Depends(get_db), limit: int = 
                 "loyalty_points": int(c.loyalty_points or 0),
                 "total_purchased": float(t.get("total") or 0),
                 "last_purchase": _fmt_date(t.get("last")),
+                "customer_type": c.customer_type or "varejo",
             })
         return result
     except Exception as e:
@@ -113,6 +120,7 @@ def create_customer(data: CustomerCreate, request: Request, db: Session = Depend
         phone=phone_clean or None,
         email=data.email.strip() if data.email else None,
         birthday=data.birthday or None,
+        customer_type=_clean_customer_type(data.customer_type),
     )
     db.add(customer)
     db.commit()
@@ -138,6 +146,7 @@ def update_customer(customer_id: int, data: CustomerUpdate, request: Request, db
     customer.phone = phone_clean or customer.phone
     customer.email = data.email.strip() if data.email else None
     customer.birthday = data.birthday or None
+    customer.customer_type = _clean_customer_type(data.customer_type)
     db.commit()
     return {"success": True}
 

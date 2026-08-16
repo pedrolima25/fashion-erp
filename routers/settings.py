@@ -15,12 +15,16 @@ router = APIRouter()
 
 class SettingsUpdate(BaseModel):
     name: str
+    category: Optional[str] = None
     whatsapp_number: Optional[str] = None
     pix_key: Optional[str] = None
     address: Optional[str] = None
     location_link: Optional[str] = None
     delivery_fee: float = 0.0
     delivery_mode: str = "fixed"
+    logo_base64: Optional[str] = None
+    show_retail_price: bool = True
+    show_wholesale_price: bool = True
 
 
 class NeighborhoodSchema(BaseModel):
@@ -60,6 +64,7 @@ def get_settings(request: Request, db: Session = Depends(get_db)):
         return {"error": "Empresa não encontrada"}
     return {
         "name": comp.name,
+        "category": comp.category or "",
         "whatsapp_number": comp.whatsapp_number,
         "pix_key": comp.pix_key,
         "address": comp.address,
@@ -67,6 +72,9 @@ def get_settings(request: Request, db: Session = Depends(get_db)):
         "delivery_fee": comp.delivery_fee,
         "delivery_mode": comp.delivery_mode or "fixed",
         "slug": comp.slug or "",
+        "logo_base64": comp.logo_base64,
+        "show_retail_price": comp.show_retail_price if comp.show_retail_price is not None else True,
+        "show_wholesale_price": comp.show_wholesale_price if comp.show_wholesale_price is not None else True,
     }
 
 
@@ -77,12 +85,18 @@ def save_settings(data: SettingsUpdate, request: Request, db: Session = Depends(
     if not comp:
         return {"error": "Não encontrado"}
     comp.name = data.name
+    if data.category:
+        comp.category = data.category
     comp.whatsapp_number = data.whatsapp_number
     comp.pix_key = data.pix_key
     comp.address = data.address
     comp.location_link = data.location_link
     comp.delivery_fee = data.delivery_fee
     comp.delivery_mode = data.delivery_mode
+    comp.show_retail_price = data.show_retail_price
+    comp.show_wholesale_price = data.show_wholesale_price
+    if data.logo_base64:
+        comp.logo_base64 = data.logo_base64
     db.commit()
     return {"success": True}
 

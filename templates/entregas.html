@@ -28,9 +28,9 @@
     <aside class="glass" style="padding: 1.25rem;">
         <h3 style="font-size: 1rem; font-weight: 800; margin-bottom: 1rem;">Entregadores</h3>
         <div style="display: grid; gap: 0.75rem; margin-bottom: 1rem;">
-            <input id="driver-name" placeholder="Nome" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-            <input id="driver-phone" placeholder="WhatsApp com DDD" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
-            <input id="driver-vehicle" placeholder="Veiculo / placa" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+            <input id="driver-name" placeholder="Nome" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
+            <input id="driver-phone" placeholder="WhatsApp com DDD" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
+            <input id="driver-vehicle" placeholder="Veiculo / placa" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
             <button onclick="saveDriver()" class="btn btn-primary" style="justify-content: center;">
                 <i class="ph ph-plus"></i> Cadastrar
             </button>
@@ -269,25 +269,25 @@
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.85rem; color: var(--text-muted); font-size: 0.8rem;">
                         <div>
-                            <strong style="color: white;">Destino</strong>
+                            <strong style="color: var(--text-main);">Destino</strong>
                             <div>${escapeHtml(order.address || '-')}</div>
                             <div>Ref.: ${escapeHtml(order.reference || '-')}</div>
                             <div>${location}</div>
                         </div>
                         <div>
-                            <strong style="color: white;">Entregador</strong>
+                            <strong style="color: var(--text-main);">Entregador</strong>
                             <div>${order.driver ? escapeHtml(order.driver.name) : 'Sem entregador'}</div>
                             <div>${order.driver ? escapeHtml(order.driver.phone) : '-'}</div>
                             <div>${order.driver ? escapeHtml(order.driver.vehicle || '-') : '-'}</div>
                         </div>
                         <div>
-                            <strong style="color: white;">Itens</strong>
+                            <strong style="color: var(--text-main);">Itens</strong>
                             ${items}
                         </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 0.75rem; margin-top: 1rem; align-items: center;">
-                        <select id="driver-select-${order.id}" style="width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: white;">
+                        <select id="driver-select-${order.id}" style="width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg); color: var(--text-main);">
                             ${driverOptions}
                         </select>
                         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
