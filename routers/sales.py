@@ -236,7 +236,7 @@ def get_sale_receipt(sale_id: int, request: Request, db: Session = Depends(get_d
     )
     subtotal = sum(item.quantity * item.unit_price for item in sale.items)
 
-    html = f"""<!DOCTYPE html>
+    page_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Pedido #{sale.id}</title></head>
 <body style="margin:0; padding:10px; font-family:'Courier New', Courier, monospace; font-size:12px; width:80mm; background:white; color:black;">
     <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">{company_name}</div>
@@ -271,7 +271,7 @@ def get_sale_receipt(sale_id: int, request: Request, db: Session = Depends(get_d
     </div>
     <script>window.onload = () => window.print();</script>
 </body></html>"""
-    return HTMLResponse(html)
+    return HTMLResponse(page_html)
 
 
 @router.post("/api/sales/{sale_id}/confirm")
