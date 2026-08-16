@@ -274,8 +274,12 @@ def get_sale_receipt(sale_id: int, request: Request, db: Session = Depends(get_d
     return HTMLResponse(page_html)
 
 
+class ConfirmSaleSchema(BaseModel):
+    payment_method: Optional[str] = None
+
+
 @router.post("/api/sales/{sale_id}/confirm")
-def confirm_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
+def confirm_sale(sale_id: int, request: Request, data: ConfirmSaleSchema = ConfirmSaleSchema(), db: Session = Depends(get_db)):
     try:
         raw_cid = request.session.get("company_id")
         if raw_cid is None:
@@ -286,6 +290,9 @@ def confirm_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
             return JSONResponse(status_code=404, content={"error": f"Venda {sale_id} não encontrada"})
         if sale.status != "pending":
             return {"success": True, "message": "Venda já processada"}
+
+        if data.payment_method:
+            sale.payment_method = data.payment_method
 
         for item in sale.items:
             if item.variation_id:

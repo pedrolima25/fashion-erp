@@ -16,7 +16,15 @@
             <i class="ph-bold ph-question" style="color: var(--primary); font-size: 2rem;"></i>
         </div>
         <h3 id="confirm-title" style="margin-bottom: 1rem; font-size: 1.25rem;">Confirmar Ação?</h3>
-        <p id="confirm-body" style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem;">Deseja confirmar o recebimento do pagamento deste pedido?</p>
+        <p id="confirm-body" style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.95rem;">Deseja confirmar o recebimento do pagamento deste pedido?</p>
+        <div id="confirm-payment-wrap" style="display:none; margin-bottom: 1.5rem; text-align:left;">
+            <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.4rem;">Como o cliente pagou?</label>
+            <select id="confirm-payment-method" style="width:100%; padding:0.6rem 0.75rem; border-radius:8px; border:1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size:0.9rem;">
+                <option value="PIX">💠 PIX</option>
+                <option value="Dinheiro">💵 Dinheiro</option>
+                <option value="Cartão">💳 Cartão</option>
+            </select>
+        </div>
         <div style="display: flex; gap: 1rem;">
             <button id="confirm-btn-cancel" class="btn btn-secondary" style="flex: 1; justify-content: center;">Não, Voltar</button>
             <button id="confirm-btn-ok" class="btn btn-primary" style="flex: 1; justify-content: center; background: #10b981;">Sim, Confirmar</button>
@@ -389,17 +397,20 @@
         function openConfirm(id, action) {
             currentActionId = id;
             currentActionType = action;
-            
+            const paymentWrap = document.getElementById('confirm-payment-wrap');
+
             if (action === 'confirm') {
                 modalTitle.innerText = "Confirmar Pagamento?";
                 modalBody.innerText = `Você confirma que o valor do Pedido #${id} já está na sua conta? Isso baixará o estoque automaticamente.`;
                 btnOk.style.background = "#10b981";
                 btnOk.innerText = "Sim, Recebido!";
+                paymentWrap.style.display = 'block';
             } else {
                 modalTitle.innerText = "Cancelar Pedido?";
                 modalBody.innerText = `Tem certeza que deseja cancelar o Pedido #${id}?`;
                 btnOk.style.background = "#ef4444";
                 btnOk.innerText = "Sim, Cancelar";
+                paymentWrap.style.display = 'none';
             }
             modal.style.display = 'flex';
         }
@@ -409,9 +420,14 @@
         btnOk.onclick = async () => {
             modal.style.display = 'none';
             const endpoint = currentActionType === 'confirm' ? 'confirm' : 'cancel';
-            
+            const fetchOpts = { method: 'POST' };
+            if (currentActionType === 'confirm') {
+                fetchOpts.headers = { 'Content-Type': 'application/json' };
+                fetchOpts.body = JSON.stringify({ payment_method: document.getElementById('confirm-payment-method').value });
+            }
+
             try {
-                const res = await apiFetch(`/api/sales/${currentActionId}/${endpoint}`, { method: 'POST' });
+                const res = await apiFetch(`/api/sales/${currentActionId}/${endpoint}`, fetchOpts);
                 const data = await res.json();
                 if (res.ok) {
                     showToast(currentActionType === 'confirm' ? 'Pagamento Confirmado!' : 'Pedido Cancelado');
