@@ -1,14 +1,15 @@
 from typing import Optional
+import html
 import logging
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import case
 
 from database import (
     get_db, get_manaus_time, manaus_tz,
-    Sale, SaleItem, Product, ProductVariation, Customer, Transaction, LoyaltyConfig, AuditLog, Coupon,
+    Sale, SaleItem, Product, ProductVariation, Customer, Transaction, LoyaltyConfig, AuditLog, Coupon, Company,
 )
 from whatsapp_service import whatsapp_manager
 
@@ -201,6 +202,76 @@ def get_sale_detail(sale_id: int, request: Request, db: Session = Depends(get_db
         "customer": {"name": sale.customer.name, "phone": sale.customer.phone} if sale.customer else None,
         "items": items_list,
     }
+
+
+@router.get("/api/sales/{sale_id}/receipt")
+def get_sale_receipt(sale_id: int, request: Request, db: Session = Depends(get_db)):
+    cid = request.session.get("company_id")
+    sale = (
+        db.query(Sale)
+        .options(
+            selectinload(Sale.customer),
+            selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.items).selectinload(SaleItem.variation),
+        )
+        .filter(Sale.id == sale_id, Sale.company_id == cid)
+        .first()
+    )
+    if not sale:
+        return HTMLResponse("<h1>Venda não encontrada</h1>", status_code=404)
+
+    company = db.query(Company).filter(Company.id == cid).first()
+    company_name = html.escape(company.name if company else "Loja")
+    customer_name = html.escape(sale.customer.name) if sale.customer else ""
+    notes = html.escape(sale.notes) if sale.notes else ""
+    payment_method = html.escape(sale.payment_method or "")
+
+    items_html = "".join(
+        f"""<tr>
+            <td style="padding:4px 0;">{html.escape(item.product.name if item.product else '')} {html.escape(item.variation.size if item.variation else '')}</td>
+            <td style="text-align:center;">{item.quantity}</td>
+            <td style="text-align:right;">{item.quantity * item.unit_price:.2f}</td>
+        </tr>"""
+        for item in sale.items
+    )
+    subtotal = sum(item.quantity * item.unit_price for item in sale.items)
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Pedido #{sale.id}</title></head>
+<body style="margin:0; padding:10px; font-family:'Courier New', Courier, monospace; font-size:12px; width:80mm; background:white; color:black;">
+    <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">{company_name}</div>
+    <div style="text-align:center; margin-bottom:10px; border-bottom:1px dashed black; padding-bottom:10px;">COMPROVANTE DE VENDA</div>
+    <div style="margin-bottom:10px;">
+        <b>Pedido:</b> #{sale.id}<br>
+        <b>Data:</b> {sale.date.astimezone(manaus_tz).strftime('%d/%m/%Y %H:%M')}<br>
+        {f'<b>Cliente:</b> {customer_name}<br>' if sale.customer else ''}
+    </div>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:10px; border-bottom:1px dashed black;">
+        <thead>
+            <tr style="border-bottom:1px dashed black;">
+                <th style="text-align:left; padding-bottom:5px;">ITEM</th>
+                <th style="text-align:center; padding-bottom:5px;">QTD</th>
+                <th style="text-align:right; padding-bottom:5px;">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>{items_html}</tbody>
+    </table>
+    <div style="text-align:right; margin-bottom:10px;">
+        Subtotal: R$ {subtotal:.2f}<br>
+        {f'Desconto: - R$ {sale.discount:.2f}<br>' if sale.discount else ''}
+        {f'Frete: R$ {sale.delivery_fee:.2f}<br>' if sale.delivery_fee else ''}
+        <b style="font-size:14px;">TOTAL: R$ {sale.total_amount:.2f}</b>
+    </div>
+    <div style="border-top:1px dashed black; padding-top:10px; text-align:center;">
+        <b>Pagamento:</b> {payment_method}<br>
+        <b>Entrega:</b> {'Entrega' if sale.delivery_type == 'delivery' else 'Retirada'}<br>
+        {f'<br><b>Obs:</b> {notes}<br>' if notes else ''}
+        <br>
+        Obrigado pela preferência!
+    </div>
+    <script>window.onload = () => window.print();</script>
+</body></html>"""
+    return HTMLResponse(html)
 
 
 @router.post("/api/sales/{sale_id}/confirm")
