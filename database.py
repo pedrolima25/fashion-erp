@@ -24,7 +24,8 @@ else:
     DATABASE_URL = DATABASE_URL.strip()
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    if "postgresql" in DATABASE_URL and "sslmode" not in DATABASE_URL:
+    _is_local_db = any(host in DATABASE_URL for host in ("@db:", "@localhost:", "@127.0.0.1:"))
+    if "postgresql" in DATABASE_URL and "sslmode" not in DATABASE_URL and not _is_local_db:
         DATABASE_URL += "&sslmode=require" if "?" in DATABASE_URL else "?sslmode=require"
 
 if "sqlite" in DATABASE_URL:
