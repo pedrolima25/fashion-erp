@@ -508,7 +508,11 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
 
     recentes = (
         db.query(Sale)
-        .options(selectinload(Sale.customer))
+        .options(
+            selectinload(Sale.customer),
+            selectinload(Sale.items).selectinload(SaleItem.product),
+            selectinload(Sale.items).selectinload(SaleItem.variation),
+        )
         .filter(Sale.company_id == company_id)
         .order_by(case((Sale.status == "pending", 0), else_=1), Sale.date.desc())
         .limit(20)
@@ -519,11 +523,24 @@ def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
             "id": r.id,
             "data": r.date.astimezone(manaus_tz).strftime("%H:%M"),
             "cliente": r.customer.name if r.customer else "Final Consumidor",
+            "telefone": r.customer.phone if r.customer else "",
             "total": r.total_amount,
             "pagamento": r.payment_method,
             "logistica": r.delivery_type if r.delivery_type else "Presencial",
             "endereco": r.delivery_address if r.delivery_address else "",
+            "referencia": r.delivery_reference if r.delivery_reference else "",
+            "localizacao": r.delivery_location_link if r.delivery_location_link else "",
+            "frete": r.delivery_fee,
             "status": r.status,
+            "itens": [
+                {
+                    "nome": item.product.name if item.product else "",
+                    "tamanho": item.variation.size if item.variation else "",
+                    "qtd": item.quantity,
+                    "preco": item.unit_price,
+                }
+                for item in r.items
+            ],
         }
         for r in recentes
     ]

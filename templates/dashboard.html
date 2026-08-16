@@ -513,6 +513,10 @@
                     const isDelivery = v.logistica === 'delivery';
                     const cliente = escapeHtml(v.cliente || 'Final Consumidor');
                     const telefone = escapeHtml(v.telefone || '');
+                    const telefoneDigits = (v.telefone || '').replace(/\D/g, '');
+                    const whatsappBtn = telefoneDigits
+                        ? `<a href="https://wa.me/55${telefoneDigits}" target="_blank" rel="noopener" title="Chamar no WhatsApp" style="color:#25d366; margin-left:6px;"><i class="ph-bold ph-whatsapp-logo"></i></a>`
+                        : '';
                     const endereco = escapeHtml(v.endereco || '');
                     const referencia = escapeHtml(v.referencia || '');
                     const localizacao = escapeHtml(v.localizacao || '');
@@ -555,7 +559,7 @@
                             <td style="padding: 1rem; font-size: 0.8rem;">${v.data}</td>
                             <td style="padding: 1rem; font-size: 0.85rem; font-weight: 600;">
                                 <div>${cliente}</div>
-                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">${telefone || '-'}</div>
+                                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display:flex; align-items:center;">${telefone || '-'}${whatsappBtn}</div>
                             </td>
                             <td style="padding: 1rem;">
                                 <span style="background: ${entregaColor}22; color: ${entregaColor}; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 800;">${entregaLabel}</span>
